@@ -40,5 +40,5 @@ tab_width = 4
 trim_trailing_whitespace = true
 
 #최대 코드 가로 길이 120
-[line-length-120]
+# [line-length-120]
 max_line_length = 120
