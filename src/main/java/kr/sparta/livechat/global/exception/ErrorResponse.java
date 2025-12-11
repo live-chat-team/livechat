@@ -25,6 +25,12 @@ public class ErrorResponse {
 	private final String message;
 	private final LocalDateTime timestamp;
 
+	/**
+	 * 주어진 {@link ErrorCode} 정보를 기반으로 표준화된 {@code ErrorResponse} 객체를 생성합니다.
+	 *
+	 * @param errorCode 변환할 에러 코드
+	 * @return ErrorCode 값을 포함하고 현재 시각을 timestamp로 갖는 ErrorResponse 객체체
+	 */
 	public static ErrorResponse of(ErrorCode errorCode) {
 		return ErrorResponse.builder()
 			.status(errorCode.getStatus().value())
