@@ -1,0 +1,44 @@
+# top-most EditorConfig file
+root = true
+
+
+#1. 공통 설정 (모든파일)
+[*]
+# [encoding-utf8]
+charset = utf-8
+
+
+#줄 끝 문자
+# [newline-lf]
+end_of_line = lf
+
+#파일 끝에 반드시 새줄 추가
+# [newline-eof]
+insert_final_newline = true
+
+
+#2. 파일 형식별 예외 설정
+[*.bat]
+end_of_line = crlf
+
+#3. Java 파일 설정
+#들여쓰기 스타일: tab 사용
+[*.java]
+# [indentation-tab]
+indent_style = tab
+
+
+#들여쓰기 크기 4칸
+# [4-spaces-tab]
+indent_size = 4
+
+#탬 문자를 공백 4칸으로 처리
+tab_width = 4
+
+#줄 끝에 붙은 불필요한 공백 제거
+# [no-trailing-spaces]
+trim_trailing_whitespace = true
+
+#최대 코드 가로 길이 120
+# [line-length-120]
+max_line_length = 120
