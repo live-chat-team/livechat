@@ -1,6 +1,5 @@
 package kr.sparta.livechat.global.exception;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -18,24 +17,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice // @ControllerAdvice + @ResponseBody로 반환 객체를 JSON으로 직렬화
 public class GlobalExceptionHandler {
-
-	/**
-	 * 예상하지 못한 모든 예외를 처리하기 위한 기본 핸들러입니다.
-	 * 비즈니스 로직에서 정의하지 않은 예외가 발생한 경우, 내부 서버 오류(500)으로 반환합니다.
-	 *
-	 * @param exception 처리할 예외 객체
-	 * @return INTERNAL_SERVER_ERROR 상태와 표준화된 응답 본문
-	 */
-	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ErrorResponse> handleException(Exception exception) {
-		ErrorResponse response = ErrorResponse.builder()
-			.status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-			.code("INTERNAL_SERVER_ERROR")
-			.message("서버 내부 오류가 발생했습니다.")
-			.build();
-
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-	}
 
 	/**
 	 * 비즈니스 로직 처리 과정에서 발생한 {@link CustomException}을 처리하는 핸들러입니다.
