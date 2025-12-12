@@ -19,6 +19,9 @@ import kr.sparta.livechat.global.exception.ErrorResponse;
  */
 public class ErrorResponseTest {
 
+	/**
+	 * ErrorCode로부터 생성된 ErrorResponse의 필드 매핑을 검증한다.
+	 */
 	@Test
 	@DisplayName("ErrorCode 기반으로 ErrorResponse가 올바르게 생성된다.")
 	void test() {
