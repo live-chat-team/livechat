@@ -24,7 +24,7 @@ public class ErrorResponseTest {
 	 */
 	@Test
 	@DisplayName("ErrorCode 기반으로 ErrorResponse가 올바르게 생성된다.")
-	void test() {
+	void createErrorResponseFromErrorCode() {
 		// given
 		ErrorCode errorCode = ErrorCode.PRODUCT_NOT_FOUND;
 
