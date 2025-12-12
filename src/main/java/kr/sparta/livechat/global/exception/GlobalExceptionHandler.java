@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * @version 1.0
  * @since 2025. 12. 11.
  */
-@RestControllerAdvice // @ControllerAdvice + @ResponseBody로 반환 객체를 JSON으로 직렬화
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	/**
