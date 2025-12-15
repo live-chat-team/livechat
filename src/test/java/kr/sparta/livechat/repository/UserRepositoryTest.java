@@ -12,6 +12,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
 
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
@@ -27,7 +28,8 @@ import kr.sparta.livechat.entity.User;
  * @since 2025. 12. 12.
  */
 @DataJpaTest
-@AutoConfigureTestDatabase(replace = Replace.NONE)
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = Replace.ANY)
 public class UserRepositoryTest {
 
 	@Autowired
@@ -47,8 +49,6 @@ public class UserRepositoryTest {
 			.build();
 	}
 
-	// 1. 기본 CRUD 및 ID 자동 할당 테스트
-
 	/**
 	 * 새로운 user 엔티티를 저장하고 ID가 자동 할당되며, 저장된 데이터를 조회하여 검증합니다.
 	 */
@@ -64,13 +64,10 @@ public class UserRepositoryTest {
 		// Then
 		assertThat(savedUser).isNotNull();
 		assertThat(savedUser.getId()).isNotNull();
-
 		Optional<User> foundUser = userRepository.findById(savedUser.getId());
 		assertThat(foundUser).isPresent();
 		assertThat(foundUser.get().getEmail()).isEqualTo("test@save.com");
 	}
-
-	//2.findByEmail 테스트
 
 	/**
 	 * 이메일로 사용자를 조회하여 Optional<User> 객체에 데이터가 올바르게 담겨 반환되는지 검증합니다.
@@ -95,7 +92,7 @@ public class UserRepositoryTest {
 	 * 존재하지 않는 이메일로 조회 시, 빈 optional 이 반환되는지 검증합니다.
 	 */
 	@Test
-	@DisplayName("findByEmail_Fail_UserNotFoundTest")
+	@DisplayName("존재하지 않는 이메일 조회 시")
 	void findByEmail_Fail_UserNotFoundTest() {
 		// Given
 		String nonExistentEmail = "notfound@email.com";
@@ -107,13 +104,11 @@ public class UserRepositoryTest {
 		assertThat(foundUser).isEmpty();
 	}
 
-	//3. 회원가입 중복 체크 테스트
-
 	/**
-	 * DB에 존재하는 이메일로 호출 시, true를 반환하는지 검증합니다.
+	 * 회원가입 중복 체크 테스트
 	 */
 	@Test
-	@DisplayName("existsByEmail_Success_ReturnsTrueTest")
+	@DisplayName("회원가입 중복 체크 테스트")
 	void existsByEmail_Success_ReturnsTrueTest() {
 		// Given
 		String duplicateEmail = "duplicate@check.com";
@@ -143,24 +138,20 @@ public class UserRepositoryTest {
 		assertThat(exists).isFalse();
 	}
 
-	// 4. 사용자 유일성 제약 조건 테스트
-
 	/**
 	 * 동일한 이메일을 가진 두 번째 사용자를 저장하려고 할 때
 	 * 예외처리가 발생하는지 검증
 	 */
 	@Test
-	@DisplayName("save_Fail_EmailUniqueViolationTest")
+	@DisplayName("같은 이메일 중복 저장시")
 	void save_Fail_EmailUniqueViolationTest() {
 		// Given
 		String email = "violation@db.com";
 		User user1 = createTestUser(email);
 		User user2 = createTestUser(email);
-
 		userRepository.save(user1);
 
 		// When & Then
-		// 두 번째 사용자 저장 예회처리가 발생해야 함
 		assertThrows(DataIntegrityViolationException.class, () -> {
 			userRepository.saveAndFlush(user2);
 		});
