@@ -14,6 +14,9 @@ import kr.sparta.livechat.service.AuthService;
 import lombok.RequiredArgsConstructor;
 
 /**
+ * 인증 및 회원가입 관련 API 요청을 처리하는 Controller 클래스입니다.
+ * 회원가입 요청을 받아 Service 계층으로 위임하고,
+ *  요청/응답에 대한 Validation 및 HTTP 상태 코드를 관리합니다.
  * AuthController.java
  *
  * @author kimsehyun

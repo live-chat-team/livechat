@@ -20,8 +20,8 @@ import kr.sparta.livechat.entity.User;
 /**
  * UserRepository에 대한 테스트 클래스입니다.
  * {@code @DataJpaTest}를 사용하여 JPA 관련 빈들만 로드하며,
- * {@code @AutoConfigureTestDatabase(replace = Replace.NONE)} 설정을 통해
- * 인메모리 DB 대체 없이 실제(또는 설정된) 데이터베이스 연결을 사용하여 테스트합니다.
+ * {@code @AutoConfigureTestDatabase(replace = Replace.ANY)} 설정을 통해
+ * 인메모리 DB 대체 없이 실제 데이터베이스 연결을 사용하여 테스트합니다.
  * UserRepositoryTest.java
  *
  * @author kimsehyun

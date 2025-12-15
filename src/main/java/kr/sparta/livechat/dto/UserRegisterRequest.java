@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
  *
  * @author kimsehyun
  * @since 2025. 12. 11.
- *
  */
 @Getter
 @NoArgsConstructor

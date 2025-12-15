@@ -32,10 +32,13 @@ import kr.sparta.livechat.service.AuthService;
 
 /**
  * AuthController 단위 테스트
+ * Controller 로직만 검증
+ * Service는 Mock 처리
+ * Validation / ExceptionHandler 동작 포함
+ * AuthControllerTest.java
  *
- * - Controller 로직만 검증
- * - Service는 Mock 처리
- * - Validation / ExceptionHandler 동작 포함
+ * @author kimsehyun
+ * @since 2025. 12. 12.
  */
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {

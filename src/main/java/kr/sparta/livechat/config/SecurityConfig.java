@@ -9,6 +9,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
+ * pring Security 설정을 담당하는 Configuration 클래스입니다.
+ * 인증 및 인가 정책, 비밀번호 인코더, 보안 필터 체인 등의
+ * 전반적인 보안 설정을 정의합니다.
  * SecurityConfig.java
  *
  * @author kimsehyun
