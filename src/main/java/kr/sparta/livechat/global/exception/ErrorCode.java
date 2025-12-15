@@ -30,6 +30,18 @@ public enum ErrorCode {
 	AUTH_INVALID_TOKEN(
 		HttpStatus.UNAUTHORIZED, "AUTH_INVALID_TOKEN", "인증에 실패하였습니다."),
 
+	AUTH_DUPLICATE_EMAIL(
+		HttpStatus.CONFLICT, "AUTH_DUPLICATE_EMAIL", "이미 사용 중인 이메일 주소입니다."),
+
+	AUTH_FORBIDDEN_ROLE(
+		HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN_ROLE", "ADMIN 역할은 일반 회원가입을 통해 등록할 수 없습니다."),
+
+	AUTH_USER_NOT_FOUND(
+		HttpStatus.UNAUTHORIZED, "AUTH_USER_NOT_FOUND", "사용자 정보가 일치하지 않습니다."),
+
+	AUTH_PASSWORD_MISMATCH(
+		HttpStatus.UNAUTHORIZED, "AUTH_PASSWORD_MISMATCH", "사용자 정보가 일치하지 않습니다."),
+
 	// 상품 관리에서 사용할 에러코드
 	PRODUCT_INVALID_INPUT(
 		HttpStatus.BAD_REQUEST, "PRODUCT_INVALID_INPUT", "입력한 데이터가 양식에 맞지 않습니다."),
