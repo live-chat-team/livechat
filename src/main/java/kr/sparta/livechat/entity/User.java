@@ -33,49 +33,26 @@ import lombok.Setter;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
 public class User {
-
-	/**
-	 * 사용자 고유 식별자입니다.
-	 */
 	@Id
-
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	/**
-	 * 사용자 이메일입니다.
-	 */
 	@Column(nullable = false, unique = true, length = 100)
 	private String email;
 
-	/**
-	 * 사용자 이름입니다.
-	 */
 	@Column(nullable = false, length = 100)
 	private String name;
 
-	/**
-	 * 암호화된 비밀번호입니다.
-	 */
 	@Column(nullable = false, length = 500)
 	private String password;
 
-	/**
-	 * 사용자 역할을 나타냅니다.
-	 */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private Role role;
 
-	/**
-	 * 계정 생성 시간입니다.
-	 */
 	@CreationTimestamp
 	private LocalDateTime createdAt;
 
-	/**
-	 * 계정 정보가 변경될 때 자동으로 갱신되는 시간입니다.
-	 */
 	@UpdateTimestamp
 	private LocalDateTime updatedAt;
 

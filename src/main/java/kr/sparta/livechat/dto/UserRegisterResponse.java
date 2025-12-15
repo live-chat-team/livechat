@@ -23,29 +23,14 @@ import lombok.Getter;
 @AllArgsConstructor
 public class UserRegisterResponse {
 
-	/**
-	 * 사용자 고유 ID
-	 */
 	private final Long id;
 
-	/**
-	 * 사용자 이메일
-	 */
 	private final String email;
 
-	/**
-	 * 사용자 이름
-	 */
 	private final String name;
 
-	/**
-	 * 사용자 역할
-	 */
 	private final Role role;
 
-	/**
-	 * 사용자 생성 시각
-	 */
 	private final LocalDateTime createdAt;
 
 	/**

@@ -12,18 +12,9 @@ package kr.sparta.livechat.entity;
  */
 public enum Role {
 
-	/**
-	 * 상품을 구매하는 일반 사용자
-	 */
 	BUYER,
 
-	/**
-	 * 상품을 판매하는 사용자
-	 */
 	SELLER,
 
-	/**
-	 * 서비스를 관리하는 관리자
-	 */
 	ADMIN
 }
