@@ -1,6 +1,5 @@
 package kr.sparta.livechat.service;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -10,6 +9,8 @@ import kr.sparta.livechat.dto.UserRegisterRequest;
 import kr.sparta.livechat.dto.UserRegisterResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -41,26 +42,16 @@ public class AuthService {
 	@Transactional
 	public UserRegisterResponse registerUser(UserRegisterRequest request) {
 
-		// 1. 이메일 중복 체크
-		if (userRepository.existsByEmail(
-			request.getEmail())) {
-			throw new ResponseStatusException(
-				HttpStatus.CONFLICT,
-				"이미 사용 중인 이메일 주소입니다."
-			);
-		}
-		// 2. ADMIN 역할 등록 방지 체크
 		if (request.getRole() == Role.ADMIN) {
-			throw new ResponseStatusException(
-				HttpStatus.FORBIDDEN,
-				"ADMIN 역할은 일반 회원가입을 통해 등록할 수 없습니다."
-			);
+			throw new CustomException(ErrorCode.AUTH_FORBIDDEN_ROLE);
+
+		}
+		if (userRepository.existsByEmail(request.getEmail())) {
+			throw new CustomException(ErrorCode.AUTH_DUPLICATE_EMAIL);
 		}
 
-		// 3. 비밀번호 암호화
 		String encodedPassword = passwordEncoder.encode(request.getPassword());
 
-		// 4. 사용자 엔티티 생성
 		User user = User.builder()
 			.email(request.getEmail())
 			.name(request.getName())
@@ -68,10 +59,8 @@ public class AuthService {
 			.role(request.getRole())
 			.build();
 
-		// 5. DB 저장
 		userRepository.save(user);
 
-		// 6. 응답 DTO 반환
 		return UserRegisterResponse.from(user);
 	}
 }
