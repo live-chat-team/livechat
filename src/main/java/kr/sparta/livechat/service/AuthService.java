@@ -7,7 +7,6 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.transaction.Transactional;
 import kr.sparta.livechat.dto.UserRegisterRequest;
 import kr.sparta.livechat.dto.UserRegisterResponse;
-import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
@@ -42,10 +41,6 @@ public class AuthService {
 	@Transactional
 	public UserRegisterResponse registerUser(UserRegisterRequest request) {
 
-		if (request.getRole() == Role.ADMIN) {
-			throw new CustomException(ErrorCode.AUTH_FORBIDDEN_ROLE);
-
-		}
 		if (userRepository.existsByEmail(request.getEmail())) {
 			throw new CustomException(ErrorCode.AUTH_DUPLICATE_EMAIL);
 		}
