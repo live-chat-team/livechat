@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import kr.sparta.livechat.dto.UserRegisterRequest;
 import kr.sparta.livechat.dto.UserRegisterResponse;
+import kr.sparta.livechat.entity.Role;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.service.AuthService;
 import lombok.RequiredArgsConstructor;
 
@@ -41,7 +44,11 @@ public class AuthController {
 	public ResponseEntity<UserRegisterResponse> register(
 		@Valid @RequestBody UserRegisterRequest request) {
 
+		if (request.getRole() == Role.ADMIN) {
+			throw new CustomException(ErrorCode.AUTH_FORBIDDEN_ROLE);
+		}
 		UserRegisterResponse response = authService.registerUser(request);
+
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 }
