@@ -17,6 +17,8 @@ import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ProductRepository;
 import kr.sparta.livechat.repository.UserRepository;
 
@@ -77,5 +79,30 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verify(productRepository).existsBySellerAndName(seller, req.getName());
 		verify(productRepository).save(any(Product.class));
+	}
+
+	/**
+	 * 판매자 조회 실패 시 예외에 대한 검증 진행 -> USER_NOT_FOUND 예외처리 필요
+	 */
+	@Test
+	@DisplayName("상품 등록 실패 - 판매자 조회 실패 시에 대한 테스트 메서드")
+	void FailCaseCreateProduct_UserNotFound() {
+		//given
+		Long sellerId = 1L;
+		CreateProductRequest req = new CreateProductRequest(
+			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.empty());
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.createProduct(req, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.AUTH_USER_NOT_FOUND);
+
+		verify(userRepository).findById(sellerId);
+		verifyNoInteractions(productRepository);
 	}
 }
