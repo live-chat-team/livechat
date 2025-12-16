@@ -7,8 +7,8 @@ import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
+import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
-import kr.sparta.livechat.global.exception.product.ProductException;
 import kr.sparta.livechat.repository.ProductRepository;
 import kr.sparta.livechat.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,14 +42,14 @@ public class ProductService {
 	public CreateProductResponse createProduct(CreateProductRequest request, Long currentUserId) {
 
 		User currentUser = userRepository.findById(currentUserId)
-			.orElseThrow(() -> new ProductException(ErrorCode.AUTH_USER_NOT_FOUND));
+			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
 
 		if (currentUser.getRole() != Role.SELLER) {
-			throw new ProductException(ErrorCode.PRODUCT_ACCESS_DENIED);
+			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
 		}
 
 		if (productRepository.existsBySellerAndName(currentUser, request.getName())) {
-			throw new ProductException(ErrorCode.PRODUCT_ALREADY_EXISTS);
+			throw new CustomException(ErrorCode.PRODUCT_ALREADY_EXISTS);
 		}
 
 		Product product = Product.create(currentUser, request);
