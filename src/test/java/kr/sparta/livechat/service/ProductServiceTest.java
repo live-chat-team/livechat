@@ -138,4 +138,39 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verifyNoInteractions(productRepository);
 	}
+
+	/**
+	 * 상품 중복 등록 요청 시 예외에 대한 검증 진행 -> PRODUCT_ALREADY_EXISTS 예외처리 필요
+	 */
+	@Test
+	@DisplayName("상품 등록 실패 - 중복된 상품 등록 시에 대한 테스트 메서드")
+	void FailCaseCreateProduct_DuplicateName() {
+		//given
+		Long sellerId = 1L;
+
+		User seller = User.builder()
+			.email("thor@realhammer.com")
+			.name("토르")
+			.password("realthunder123!")
+			.role(Role.SELLER)
+			.build();
+
+		CreateProductRequest req = new CreateProductRequest(
+			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(seller));
+		given(productRepository.existsBySellerAndName(seller, req.getName())).willReturn(true);
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.createProduct(req, sellerId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ALREADY_EXISTS);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).existsBySellerAndName(seller, req.getName());
+		verify(productRepository, never()).save(any(Product.class));
+	}
 }
