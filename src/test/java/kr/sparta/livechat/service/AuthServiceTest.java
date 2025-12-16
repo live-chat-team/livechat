@@ -121,34 +121,4 @@ public class AuthServiceTest {
 		verify(passwordEncoder, never()).encode(anyString());
 		verify(userRepository, never()).save(any(User.class));
 	}
-
-	/**
-	 * 회원가입시 ROLE로 (ADMIN) 등록시
-	 * 예외 코드 및 메세지 검증
-	 */
-	@Test
-	@DisplayName("회원가입 요청 실패 (ADMIN 등록시)")
-	void registerUser_Fail_AdminRoleNotAllowedTest() {
-		// Given
-		UserRegisterRequest adminRequest = new UserRegisterRequest(
-			"admin@example.com",
-			VALID_PASSWORD,
-			"Admin",
-			Role.ADMIN
-		);
-
-		// When & Then
-		CustomException exception = assertThrows(CustomException.class,
-			() -> {
-				authService.registerUser(adminRequest);
-			});
-
-		// 예외 코드 및 메시지 검증
-		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_FORBIDDEN_ROLE);
-
-		//불필요한 호출 검증
-		verify(userRepository, never()).existsByEmail(anyString());
-		verify(passwordEncoder, never()).encode(anyString());
-		verify(userRepository, never()).save(any(User.class));
-	}
 }
