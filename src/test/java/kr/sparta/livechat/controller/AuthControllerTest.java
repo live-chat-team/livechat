@@ -114,6 +114,19 @@ class AuthControllerTest {
 	}
 
 	@Test
+	@DisplayName("회원가입 실패(ROLE ADMIN 시도")
+	void register_fail_forbidden_admin_role() throws Exception {
+		//given
+		UserRegisterRequest request = new UserRegisterRequest(
+			VALID_EMAIL,
+			VALID_PASSWORD,
+			VALID_NAME,
+			Role.ADMIN
+		);
+		ErrorCode errorCode = ErrorCode.AUTH_FORBIDDEN_ROLE;
+	}
+
+	@Test
 	@DisplayName("회원가입 실패 비밀번호 유효성 검사 실패 (400)")
 	void register_fail_password_validation() throws Exception {
 		// given
