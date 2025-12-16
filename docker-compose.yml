@@ -1,18 +1,30 @@
 services:
-  web:
+  spring-app:
     build: .
     container_name: spring
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8080:8080"
     depends_on:
       - mysql
       - redis
-    restart: always
+    networks:
+      - app-network
+
   redis:
     image: redis:alpine
     container_name: redis
+    restart: always
     ports:
       - "6379:6379"
+    networks:
+      - app-network
 
   mysql:
     image: mysql:8.0
@@ -22,11 +34,15 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DATABASE_NAME}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - my-db-volume:/var/lib/mysql
     networks:
       - app-network
-    
+
 volumes:
   my-db-volume:
+
+networks:
+  app-network:
+    driver: bridge
