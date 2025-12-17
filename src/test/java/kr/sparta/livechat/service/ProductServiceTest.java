@@ -239,4 +239,26 @@ public class ProductServiceTest {
 
 		verify(productRepository).findAll(any(PageRequest.class));
 	}
+
+	/**
+	 * 페이징 파라미터 유효성 검증 실패 시 예외를 처리하는지에 대한 검증을 진행
+	 */
+	@Test
+	@DisplayName("상품 목록 조회 실패 - page/size 유효성 검증 실패")
+	void FailCaseGetProductList_BadPagination() {
+		//given
+		int page = -1;
+		int size = 0;
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.getProductList(page, size));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.COMMON_BAD_PAGINATION);
+
+		verifyNoInteractions(productRepository);
+		verifyNoInteractions(userRepository);
+	}
 }
