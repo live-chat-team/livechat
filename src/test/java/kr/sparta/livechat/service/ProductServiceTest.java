@@ -337,6 +337,9 @@ public class ProductServiceTest {
 		verify(productRepository).findById(productId);
 	}
 
+	/**
+	 * 올바르지 않은 상품 식별자로 상세조회 요청 시 PRODUCT_INVALID_INPUT 반환여부 검증
+	 */
 	@Test
 	@DisplayName("상품 상세 조회 실패 - 유효성 검증 실패")
 	void FailCaseGetProductDetail_InvalidInput() {
