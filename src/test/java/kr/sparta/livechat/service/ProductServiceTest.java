@@ -356,4 +356,25 @@ public class ProductServiceTest {
 
 		verifyNoInteractions(productRepository);
 	}
+
+	/**
+	 * 등록되지 않은 상품 식별자로 상세조회 요청 시 PRODUCT_NOT_FOUND 에러 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 실패 - 상품이 존재하지 않음")
+	void FailCaseGetProductDetail_ProductNotFound() {
+		//given
+		Long productId = 999L;
+		given(productRepository.findById(productId)).willReturn(Optional.empty());
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.getProductDetail(productId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+		verify(productRepository).findById(productId);
+	}
 }
