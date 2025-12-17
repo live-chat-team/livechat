@@ -1,4 +1,10 @@
 spring:
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      // password: ${REDIS_PASSWORD}
+
   jackson:
     serialization:
       indent_output: true
@@ -28,3 +34,8 @@ logging:
 # 4. Server
 server:
   port: ${SERVER_PORT}
+
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  accessTokenExpirationMs: 3600000
+  refreshTokenExpirationMs: 604800000
