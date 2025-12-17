@@ -18,7 +18,7 @@ services:
       - app-network
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: redis
     restart: always
     ports:
