@@ -15,7 +15,7 @@ services:
       - mysql
       - redis
     networks:
-      - app-network
+      - livechat-network
 
   redis:
     image: redis:7-alpine
@@ -24,7 +24,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - app-network
+      - livechat-network
 
   mysql:
     image: mysql:8.0
@@ -34,7 +34,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DATABASE_NAME}
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - my-db-volume:/var/lib/mysql
     networks:
@@ -44,5 +44,5 @@ volumes:
   my-db-volume:
 
 networks:
-  app-network:
+  livechat-network:
     driver: bridge
