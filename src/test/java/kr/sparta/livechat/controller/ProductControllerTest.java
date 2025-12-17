@@ -123,6 +123,13 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.timestamp").exists());
 	}
 
+	/**
+	 * 상품 목록 조회 성공 케이스를 검증합니다.
+	 * 쿼리 파라미터를 전달하지 않으면 기본 값이 적용되며
+	 * 서비스가 반환한 {@link GetProductListResponse} 가 200(OK) 상태로 응답에 포함되는지 검증합니다.
+	 *
+	 * @throws Exception MockMvc 수행 중 예외가 발생할 수 있음
+	 */
 	@Test
 	@DisplayName("상품 목록 조회 성공 - 기본 파라미터로 200 OK 응답")
 	void getProductList_Success_DefaultParam() throws Exception {
