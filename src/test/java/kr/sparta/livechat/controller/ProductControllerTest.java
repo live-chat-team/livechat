@@ -54,6 +54,8 @@ public class ProductControllerTest {
 
 	@MockitoBean
 	private ProductService productService;
+	@Autowired
+	private GlobalExceptionHandler globalExceptionHandler;
 
 	/**
 	 * 상품 등록 성공 케이스를 검증합니다.
@@ -215,5 +217,29 @@ public class ProductControllerTest {
 		given(res.getName()).willReturn("토르의 망치");
 		given(res.getPrice()).willReturn(3000000);
 		return res;
+	}
+
+	/**
+	 * 상품 상세 조회 실패 케이스를 검증합니다.
+	 * 입력값이 잘못 입력되었을 경우 400과 ErrorResponse를 반환한다.
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 실패 - 입력값 오류 시 검증")
+	void getProductDetail_Fail_InvalidInput() throws Exception {
+		//given
+		Long invalidId = 0L;
+		given(productService.getProductDetail(invalidId))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_INVALID_INPUT));
+
+		//when & then
+		mockMvc.perform(get("/api/products/{productId}", invalidId).accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_INVALID_INPUT.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_INVALID_INPUT.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).getProductDetail(invalidId);
 	}
 }
