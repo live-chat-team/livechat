@@ -305,7 +305,7 @@ public class ProductServiceTest {
 	void SuccessCaseGetProductDetail() {
 		//given
 		Long productId = 1L;
-		LocalDateTime createdAt = LocalDateTime.parse("2025--12-09T14:06:47");
+		LocalDateTime createdAt = LocalDateTime.parse("2025-12-09T14:06:47");
 
 		User seller = mock(User.class);
 		given(seller.getId()).willReturn(1L);
