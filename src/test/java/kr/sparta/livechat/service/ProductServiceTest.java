@@ -3,6 +3,7 @@ package kr.sparta.livechat.service;
 import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.BDDMockito.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,8 +19,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import kr.sparta.livechat.domain.entity.Product;
+import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
@@ -291,5 +294,46 @@ public class ProductServiceTest {
 		assertThat(res.isHasNext()).isFalse();
 
 		verify(productRepository).findAll(any(PageRequest.class));
+	}
+
+	/**
+	 * 상품 상세 조회 성공 케이스를 검증합니다.
+	 * productId 유효성 검증 -> 응답 매핑 DTO 반환
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 성공 케이스")
+	void SuccessCaseGetProductDetail() {
+		//given
+		Long productId = 1L;
+		LocalDateTime createdAt = LocalDateTime.parse("2025--12-09T14:06:47");
+
+		User seller = mock(User.class);
+		given(seller.getId()).willReturn(1L);
+
+		Product product = mock(Product.class);
+		given(product.getId()).willReturn(productId);
+		given(product.getName()).willReturn("토르의 망치");
+		given(product.getPrice()).willReturn(3000000);
+		given(product.getDescription()).willReturn("선택받은 자만 들 수 있는 망치");
+		given(product.getSeller()).willReturn(seller);
+		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
+		given(product.getCreatedAt()).willReturn(createdAt);
+
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		//when
+		GetProductDetailResponse res = productService.getProductDetail(productId);
+
+		//then
+		assertThat(res).isNotNull();
+		assertThat(res.getProductId()).isEqualTo(productId);
+		assertThat(res.getName()).isEqualTo("토르의 망치");
+		assertThat(res.getPrice()).isEqualTo(3000000);
+		assertThat(res.getDescription()).isEqualTo("선택받은 자만 들 수 있는 망치");
+		assertThat(res.getSellerId()).isEqualTo(1L);
+		assertThat(res.getStatus()).isEqualTo(ProductStatus.ONSALE);
+		assertThat(res.getCreatedAt()).isEqualTo(createdAt);
+
+		verify(productRepository).findById(productId);
 	}
 }
