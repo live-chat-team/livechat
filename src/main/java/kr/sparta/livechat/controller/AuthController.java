@@ -19,7 +19,6 @@ import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.service.AuthService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 인증 및 회원가입 관련 API 요청을 처리하는 Controller 클래스입니다.
@@ -30,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author kimsehyun
  * @since 2025. 12. 11.
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -61,43 +59,63 @@ public class AuthController {
 	/**
 	 * 로그인 요청을 처리합니다.
 	 * 인증 성공시 Access Token 과 Refresh Token을 포함하여 응답합니다.
-	 *
-	 * @param request 로그인 요청 데이터(이메일, 비밀번호)
+	 * Refresh Token은 HttpOnly 쿠키에 저장하여 클라이언트에 전달합니다.
+	 * @param request 로그인 요청데이터(이메일, 비밀번호)
+	 * @param response HTTP 응답객체
 	 * @return JWT 토큰 정보를 포함하여 응답200(OK) 응답
 	 */
-
 	@PostMapping("/login")
 	public ResponseEntity<UserLoginResponse> login(
-		@Valid @RequestBody UserLoginRequest request) {
-		UserLoginResponse response = authService.login(request);
-		return ResponseEntity.ok(response);
+		@Valid @RequestBody UserLoginRequest request,
+		jakarta.servlet.http.HttpServletResponse response) {
+
+		UserLoginResponse loginResponse = authService.login(request);
+		org.springframework.http.ResponseCookie refreshTokenCookie = org.springframework.http.ResponseCookie.from(
+				"refreshToken", loginResponse.getRefreshToken())
+			.httpOnly(true)
+			.path("/")
+			.maxAge(7 * 24 * 60 * 60)
+			.build();
+
+		response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+		return ResponseEntity.ok(loginResponse);
 	}
 
 	/**
-	 * 로그아웃 요청을 처리합니다.
+	 * 로그아웃 요청을 처리합니다
 	 * Access Token을 추출하여 서버 측 블랙리스트에 등록합니다.
-	 *
+	 * 클라이언트에 저장된 Refresh Token 쿠키를 만료시켜 삭제합니다.
 	 * @param authorizationHeader 요청 헤더의 Authorization 값
-	 * @return 로그아웃 성공 메세지를 포함하여 응답과 함께 200(ok) d응답
-	 * @throws CustomException Access Token 이 누락 되거나 Bearer 형식이 아닐경우 예외 발생
+	 * @param response HTTP 응답 객체
+	 * @return 로그아웃 성공 메세지
 	 */
 	@PostMapping("/logout")
 	public ResponseEntity<UserLogoutResponse> logout(
-		@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-		String accessToken = null;
+		@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+		jakarta.servlet.http.HttpServletResponse response) {
 
+		String accessToken = null;
 		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
 			accessToken = authorizationHeader.substring(7);
 		}
-		if (accessToken == null) {
-			log.warn("로그아웃 요청에 Access Token이 누락되었습니다.");
-			throw new CustomException(ErrorCode.AUTH_INVALID_TOKEN_FORMAT);
+
+		if (accessToken != null) {
+			authService.logout(accessToken);
 		}
-		authService.logout(accessToken);
-		UserLogoutResponse response = UserLogoutResponse.builder()
-			.message("로그아웃이 성공적으로 처리되었습니다.")
+
+		org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("refreshToken",
+				"")
+			.path("/")
+			.maxAge(0)
+			.httpOnly(true)
 			.build();
 
-		return ResponseEntity.ok(response);
+		response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
+		UserLogoutResponse logoutResponse = UserLogoutResponse.builder()
+			.message("로그아웃 되었습니다.쿠키가 삭제되었습니다.")
+			.build();
+
+		return ResponseEntity.ok(logoutResponse);
 	}
 }
