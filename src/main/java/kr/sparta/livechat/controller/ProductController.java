@@ -64,6 +64,7 @@ public class ProductController {
 		@RequestParam(defaultValue = "0") int page,
 		@RequestParam(defaultValue = "20") int size
 	) {
-		return ResponseEntity.status(HttpStatus.OK).body(productService.getProductList(page, size));
+		GetProductListResponse response = productService.getProductList(page, size);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }
