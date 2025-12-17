@@ -3,6 +3,7 @@ package kr.sparta.livechat.service;
 import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -11,10 +12,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -172,5 +179,64 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verify(productRepository).existsBySellerAndName(seller, req.getName());
 		verify(productRepository, never()).save(any(Product.class));
+	}
+
+	/**
+	 * 상품 목록 조회 성공 케이스를 검증합니다.
+	 * page/size 유효성 검증 -> 페이징 조회 호출 -> 응답 매핑 DTO 반환
+	 */
+	@Test
+	@DisplayName("상품 목록 조회 성공 케이스")
+	void SuccessCaseGetProductList() {
+		//given
+		int page = 0;
+		int size = 20;
+
+		User seller = User.builder()
+			.email("seller@test.com")
+			.name("판매자")
+			.password("password123!")
+			.role(Role.SELLER)
+			.build();
+
+		Product p1 = Product.builder()
+			.name("상품1")
+			.price(1000)
+			.description("상품1 설명")
+			.seller(seller)
+			.build();
+
+		Product p2 = Product.builder()
+			.name("상품2")
+			.price(5000)
+			.description("상품2 설명")
+			.seller(seller)
+			.build();
+
+		List<Product> products = List.of(p1, p2);
+		Page<Product> pageResult = new PageImpl<>(
+			products,
+			PageRequest.of(page, size, Sort.by("createdAt").descending()), 2);
+
+		given(productRepository.findAll(any(PageRequest.class))).willReturn(pageResult);
+
+		//when
+		GetProductListResponse res = productService.getProductList(page, size);
+
+		//then
+		assertThat(res).isNotNull();
+		assertThat(res.getPage()).isEqualTo(page);
+		assertThat(res.getSize()).isEqualTo(size);
+		assertThat(res.getTotalElements()).isEqualTo(2L);
+		assertThat(res.getTotalPages()).isEqualTo(1);
+		assertThat(res.isHasNext()).isFalse();
+		assertThat(res.getProductList()).isNotNull();
+		assertThat(res.getProductList().size()).isEqualTo(2);
+
+		ProductListItem first = res.getProductList().get(0);
+		assertThat(first.getName()).isEqualTo("상품1");
+		assertThat(first.getPrice()).isEqualTo(1000);
+
+		verify(productRepository).findAll(any(PageRequest.class));
 	}
 }
