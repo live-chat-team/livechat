@@ -77,7 +77,7 @@ public class AuthService {
 			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS));
 
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS); // 유효하지 않은 자격 증명 (401)
+			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
 		}
 
 		String accessToken = jwtService.createAccessToken(user.getId(), user.getRole());
@@ -90,32 +90,25 @@ public class AuthService {
 	}
 
 	/**
-	 * 로그아웃 요청을 처리합니다.
+	 * 로그아웃 요청을 처리하여 인증 토큰을 무효화합니다.
 	 * 현재 사용중인 Access Token의 남은 시간을 계산하고,
 	 * 해당 시간 동안 토큰을 블랙리스트에 추가하여 무효화 합니다.
+	 * 해당 토큰이 만료 전까지 재사용 않도록 차단합니다.
 	 *
 	 * @param accessToken 로그아웃 요청 시 Header에서 추출한 Access Token
 	 */
 	public void logout(String accessToken) {
-		log.info("로그아웃 요청. Access Token 블랙리스트 처리 시작.");
+		log.info("로그아웃 요청. Access Token 블랙리스트 처리 시작");
 
-		if (accessToken == null || accessToken.isEmpty()) {
-			return;
+		if (accessToken != null && !accessToken.isEmpty()) {
+			Long expirationTimeMs = jwtService.getExpirationFromToken(accessToken);
+			if (expirationTimeMs != null) {
+				long remainingTimeMs = expirationTimeMs - System.currentTimeMillis();
+				if (remainingTimeMs > 0) {
+					tokenBlacklistService.addToBlacklist(accessToken, remainingTimeMs);
+				}
+			}
 		}
-
-		Long expirationTimeMs = jwtService.getExpirationFromToken(accessToken);
-		if (expirationTimeMs == null) {
-			return;
-		}
-
-		long now = System.currentTimeMillis();
-		long remainingTimeMs = expirationTimeMs - now;
-
-		if (remainingTimeMs <= 0) {
-			log.warn("이미 만료된 토큰입니다.");
-			return;
-		}
-		tokenBlacklistService.addToBlacklist(accessToken, remainingTimeMs);
 	}
 
 	/**
