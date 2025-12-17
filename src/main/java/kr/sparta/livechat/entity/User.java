@@ -17,7 +17,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * 사용자 정보를 표현하는 엔티티 클래스입니다.
@@ -29,7 +28,6 @@ import lombok.Setter;
  */
 @Entity
 @Getter
-@Setter(AccessLevel.PACKAGE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
 public class User {
