@@ -1,0 +1,123 @@
+package kr.sparta.livechat.controller;
+
+import static org.mockito.BDDMockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
+import kr.sparta.livechat.global.exception.GlobalExceptionHandler;
+import kr.sparta.livechat.service.ProductService;
+
+/**
+ * ProductController 테스트 클래스입니다.
+ * <p>
+ * {@link ProductController}의 요청 매핑, 요청 바디({@code @RequestBody}), 응답 상태/바디 형식을 검증합니다.
+ * 비즈니스 로직은 {@link ProductService}를 Mock 처리하여 컨트롤러 계층만 테스트합니다.
+ * </p>
+ *
+ * @author 재원
+ * @version 1.0
+ * @since 2025. 12. 16.
+ */
+@WebMvcTest(controllers = ProductController.class)
+@Import(GlobalExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(properties = "server.port=0")
+public class ProductControllerTest {
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@MockitoBean
+	private ProductService productService;
+
+	/**
+	 * 상품 등록 성공 케이스를 검증합니다.
+	 * <p>
+	 * 요청 JSON이 정상적으로 바인딩되고, 서비스가 반환한 {@link CreateProductResponse}가
+	 * 201(Created) 상태로 JSON 응답에 포함되는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("상품 등록 성공 - 201 응답, CreateProductResponse JSON 반환 검증")
+	void createProduct_Success() throws Exception {
+		//given
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "토르의 망치");
+		body.put("price", 3000000);
+		body.put("description", "선택받은 자만 들 수 있는 망치");
+
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		CreateProductResponse response = CreateProductResponse.builder()
+			.productId(1L)
+			.sellerId(1L)
+			.name("토르의 망치")
+			.price(3000000)
+			.description("선택받은 자만 들 수 있는 망치")
+			.build();
+
+		given(productService.createProduct(any(), anyLong())).willReturn(response);
+
+		//when&then
+		mockMvc.perform(post("/api/products")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.name").value("토르의 망치"))
+			.andExpect(jsonPath("$.price").value(3000000));
+
+	}
+
+	/**
+	 * 상품 등록 실패(중복 상품) 케이스를 검증합니다.
+	 * <p>
+	 * 서비스에서 중복 예외를 던지면 전역 예외 처리기가 409(Conflict)와 ErrorResponse(JSON)를 반환하는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("상품 등록 실패 - 상품명 중복이면 409와 ErrorResponse를 반환한다")
+	void createProduct_Fail_DuplicateName() throws Exception {
+		// given
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "토르의 망치");
+		body.put("price", 3000000);
+		body.put("description", "선택받은 자만 들 수 있는 망치");
+
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		given(productService.createProduct(any(), anyLong()))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_ALREADY_EXISTS));
+
+		// when & then
+		mockMvc.perform(post("/api/products")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.status").value(409))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+	}
+}
