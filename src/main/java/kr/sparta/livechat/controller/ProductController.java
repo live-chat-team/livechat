@@ -2,14 +2,17 @@ package kr.sparta.livechat.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.service.ProductService;
 import lombok.RequiredArgsConstructor;
 
@@ -46,5 +49,21 @@ public class ProductController {
 
 		CreateProductResponse response = productService.createProduct(request, sellerId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	/**
+	 * 등록된 상품 리스트를 조회합니다.
+	 * 조회 시에는 모든 사용자들이 조회할 수 있습니다.
+	 *
+	 * @param page 상품 목록 조회 페이지 (기본 0페이지)
+	 * @param size 상품 목록 조회 개수 (기본 20개 단위)
+	 * @return 등록된 상품 목록 반환
+	 */
+	@GetMapping
+	public ResponseEntity<GetProductListResponse> getProductList(
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size
+	) {
+		return ResponseEntity.status(HttpStatus.OK).body(productService.getProductList(page, size));
 	}
 }
