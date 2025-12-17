@@ -336,4 +336,21 @@ public class ProductServiceTest {
 
 		verify(productRepository).findById(productId);
 	}
+
+	@Test
+	@DisplayName("상품 상세 조회 실패 - 유효성 검증 실패")
+	void FailCaseGetProductDetail_InvalidInput() {
+		//given
+		Long invalidId = 0L;
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.getProductDetail(invalidId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_INVALID_INPUT);
+
+		verifyNoInteractions(productRepository);
+	}
 }
