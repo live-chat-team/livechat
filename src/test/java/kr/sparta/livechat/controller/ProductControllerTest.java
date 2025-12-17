@@ -157,4 +157,29 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.hasNext").value(false))
 			.andExpect(jsonPath("$.productList").isArray());
 	}
+
+	/**
+	 * 상품 목록 조회 실패(파라미터 타입 오류) 케이스를 검증
+	 * <p>
+	 * 파라미터가 양의 정수가 아닌 입력값이 전달되면, 400 에러와 ErrorResponse를 반환하는지 확인합니다.
+	 * 해당 예외가 발생 시에는 서비스는 호출되지 않는 상태인지 점검합니다.
+	 *
+	 * @throws Exception MockMvc 수행 중 예외가 발생할 수 있음
+	 */
+	@Test
+	@DisplayName("상품 목록 조회 실패 - page 타입 오류인 경우 검증")
+	void getProductList_Fail_TypeMismatch() throws Exception {
+		// when & then
+		mockMvc.perform(get("/api/products")
+				.param("page", "abc")
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.COMMON_BAD_PAGINATION.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.COMMON_BAD_PAGINATION.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		verifyNoInteractions(productService);
+	}
 }
