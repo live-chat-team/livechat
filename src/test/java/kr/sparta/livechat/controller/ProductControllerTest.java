@@ -242,4 +242,28 @@ public class ProductControllerTest {
 
 		then(productService).should(times(1)).getProductDetail(invalidId);
 	}
+
+	/**
+	 * 상품 상세 조회 실패 케이스를 검증합니다.
+	 * 등록된 상품을 조회할 수 없는 경우 404와 ErrorResponse를 반환합니다.
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 실패 - 상품을 조회할 수 없을 경우 검증")
+	void getProductDetail_Fail_ProductNotFound() throws Exception {
+		//given
+		Long productId = 999L;
+		given(productService.getProductDetail(productId))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+		//when & then
+		mockMvc.perform(get("/api/products/{productId}", productId).accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(404))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_NOT_FOUND.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_NOT_FOUND.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).getProductDetail(productId);
+	}
 }
