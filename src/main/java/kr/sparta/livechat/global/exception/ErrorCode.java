@@ -27,20 +27,22 @@ public enum ErrorCode {
 		HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버에 문제가 있습니다."),
 
 	// 인증/인가에서 사용하는 에러코드
-	AUTH_INVALID_TOKEN(
-		HttpStatus.UNAUTHORIZED, "AUTH_INVALID_TOKEN", "인증에 실패하였습니다."),
-
+	AUTH_INVALID_TOKEN_FORMAT(
+		HttpStatus.UNAUTHORIZED, "AUTH_INVALID_TOKEN_FORMAT", "토큰 형식이 유효하지 않거나 잘못된 서명입니다."),
+	AUTH_TOKEN_EXPIRED(
+		HttpStatus.UNAUTHORIZED, "AUTH_TOKEN_EXPIRED", "만료된 JWT 토큰입니다. 재로그인이 필요합니다."),
+	AUTH_TOKEN_UNSUPPORTED(
+		HttpStatus.UNAUTHORIZED, "AUTH_TOKEN_UNSUPPORTED", "지원되지 않는 JWT 토큰입니다."),
 	AUTH_DUPLICATE_EMAIL(
 		HttpStatus.CONFLICT, "AUTH_DUPLICATE_EMAIL", "이미 사용 중인 이메일 주소입니다."),
-
 	AUTH_FORBIDDEN_ROLE(
 		HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN_ROLE", "ADMIN 역할은 일반 회원가입을 통해 등록할 수 없습니다."),
-
 	AUTH_USER_NOT_FOUND(
-		HttpStatus.UNAUTHORIZED, "AUTH_USER_NOT_FOUND", "사용자 정보가 일치하지 않습니다."),
-
-	AUTH_PASSWORD_MISMATCH(
-		HttpStatus.UNAUTHORIZED, "AUTH_PASSWORD_MISMATCH", "사용자 정보가 일치하지 않습니다."),
+		HttpStatus.NOT_FOUND, "AUTH_USER_NOT_FOUND", "사용자 정보가 일치하지 않습니다."),
+	AUTH_INVALID_CREDENTIALS(
+		HttpStatus.UNAUTHORIZED, "AUTH_MISMATCH", "이메일 또는 비밀번호가 일치하지 않습니다."),
+	AUTH_TOKEN_BLACKLISTED(
+		HttpStatus.UNAUTHORIZED, "AUTH_TOKEN_BLACKLISTED", "이미 로그아웃 처리된 토큰입니다."),
 
 	// 상품 관리에서 사용할 에러코드
 	PRODUCT_INVALID_INPUT(
