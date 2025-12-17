@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.global.exception.GlobalExceptionHandler;
@@ -119,5 +121,33 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getCode()))
 			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getMessage()))
 			.andExpect(jsonPath("$.timestamp").exists());
+	}
+
+	@Test
+	@DisplayName("상품 목록 조회 성공 - 기본 파라미터로 200 OK 응답")
+	void getProductList_Success_DefaultParam() throws Exception {
+		// given
+		GetProductListResponse response = new GetProductListResponse(
+			0,
+			20,
+			0L,
+			0,
+			false,
+			List.of()
+		);
+
+		given(productService.getProductList(0, 20)).willReturn(response);
+
+		//when & then
+		mockMvc.perform(get("/api/products")
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(20))
+			.andExpect(jsonPath("$.totalElements").value(0))
+			.andExpect(jsonPath("$.totalPages").value(0))
+			.andExpect(jsonPath("$.hasNext").value(false))
+			.andExpect(jsonPath("$.productList").isArray());
 	}
 }
