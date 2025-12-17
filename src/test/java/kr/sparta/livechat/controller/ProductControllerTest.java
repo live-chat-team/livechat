@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.global.exception.GlobalExceptionHandler;
@@ -119,5 +121,65 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getCode()))
 			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getMessage()))
 			.andExpect(jsonPath("$.timestamp").exists());
+	}
+
+	/**
+	 * 상품 목록 조회 성공 케이스를 검증합니다.
+	 * 쿼리 파라미터를 전달하지 않으면 기본 값이 적용되며
+	 * 서비스가 반환한 {@link GetProductListResponse} 가 200(OK) 상태로 응답에 포함되는지 검증합니다.
+	 *
+	 * @throws Exception MockMvc 수행 중 예외가 발생할 수 있음
+	 */
+	@Test
+	@DisplayName("상품 목록 조회 성공 - 기본 파라미터로 200 OK 응답")
+	void getProductList_Success_DefaultParam() throws Exception {
+		// given
+		GetProductListResponse response = new GetProductListResponse(
+			0,
+			20,
+			0L,
+			0,
+			false,
+			List.of()
+		);
+
+		given(productService.getProductList(0, 20)).willReturn(response);
+
+		//when & then
+		mockMvc.perform(get("/api/products")
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(20))
+			.andExpect(jsonPath("$.totalElements").value(0))
+			.andExpect(jsonPath("$.totalPages").value(0))
+			.andExpect(jsonPath("$.hasNext").value(false))
+			.andExpect(jsonPath("$.productList").isArray());
+	}
+
+	/**
+	 * 상품 목록 조회 실패(파라미터 타입 오류) 케이스를 검증
+	 * <p>
+	 * 파라미터가 양의 정수가 아닌 입력값이 전달되면, 400 에러와 ErrorResponse를 반환하는지 확인합니다.
+	 * 해당 예외가 발생 시에는 서비스는 호출되지 않는 상태인지 점검합니다.
+	 *
+	 * @throws Exception MockMvc 수행 중 예외가 발생할 수 있음
+	 */
+	@Test
+	@DisplayName("상품 목록 조회 실패 - page 타입 오류인 경우 검증")
+	void getProductList_Fail_TypeMismatch() throws Exception {
+		// when & then
+		mockMvc.perform(get("/api/products")
+				.param("page", "abc")
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.COMMON_BAD_PAGINATION.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.COMMON_BAD_PAGINATION.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		verifyNoInteractions(productService);
 	}
 }
