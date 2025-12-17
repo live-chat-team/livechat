@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -52,9 +51,6 @@ public class ProductControllerTest {
 
 	@MockitoBean
 	private ProductService productService;
-
-	@MockitoBean
-	private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
 	/**
 	 * 상품 등록 성공 케이스를 검증합니다.
