@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
@@ -181,5 +182,38 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.timestamp").exists());
 
 		verifyNoInteractions(productService);
+	}
+
+	/**
+	 * 상품 상세 조회 성공 케이스를 검증합니다.
+	 * PathVariable로 전달된 productId가 서비스로 전달되고,
+	 * 서비스 반환 DTO가 200(OK)와 함께 JSON으로 응답되는지 확인합니다.
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 성공 - 200 OK 및 상품 상세정보 JSON 반환")
+	void getProductDetail_Success() throws Exception {
+		// given
+		Long productId = 1L;
+		GetProductDetailResponse response = mockDetailResponse(productId);
+		given(productService.getProductDetail(productId)).willReturn(response);
+
+		// when & then
+		mockMvc.perform(get("/api/products/{productId}", productId)
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.productId").value(1))
+			.andExpect(jsonPath("$.name").exists())
+			.andExpect(jsonPath("$.price").exists());
+
+		then(productService).should(times(1)).getProductDetail(productId);
+	}
+
+	private GetProductDetailResponse mockDetailResponse(Long productId) {
+		GetProductDetailResponse res = mock(GetProductDetailResponse.class);
+		given(res.getProductId()).willReturn(productId);
+		given(res.getName()).willReturn("토르의 망치");
+		given(res.getPrice()).willReturn(3000000);
+		return res;
 	}
 }
