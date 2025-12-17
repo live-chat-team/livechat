@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
@@ -83,18 +84,28 @@ public class ProductService {
 
 		Page<Product> pageResult = productRepository.findAll(pageable);
 
-		List<ProductListItem> productList = pageResult.getContent().stream()
-			.map(ProductListItem::new)
-			.toList();
+		List<ProductListItem> productList = pageResult.getContent().stream().map(ProductListItem::new).toList();
 
-		return new GetProductListResponse(
-			pageResult.getNumber(),
-			pageResult.getSize(),
-			pageResult.getTotalElements(),
-			pageResult.getTotalPages(),
-			pageResult.hasNext(),
-			productList
-		);
+		return new GetProductListResponse(pageResult.getNumber(), pageResult.getSize(), pageResult.getTotalElements(),
+			pageResult.getTotalPages(), pageResult.hasNext(), productList);
 	}
 
+	/**
+	 * 특정 상품의 상세 정보를 조회합니다.
+	 *
+	 * @param productId 조회할 상품 식별자
+	 * @return 상품 상세 조회 응답 DTO
+	 * @throws CustomException 상품이 존재하지 않는 경우
+	 */
+	public GetProductDetailResponse getProductDetail(Long productId) {
+
+		if (productId == null || productId <= 0) {
+			throw new CustomException((ErrorCode.PRODUCT_INVALID_INPUT));
+		}
+
+		Product product = productRepository.findById(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+		return GetProductDetailResponse.from(product);
+	}
 }
