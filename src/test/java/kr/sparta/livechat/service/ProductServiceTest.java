@@ -261,4 +261,35 @@ public class ProductServiceTest {
 		verifyNoInteractions(productRepository);
 		verifyNoInteractions(userRepository);
 	}
+
+	/**
+	 * 범위를 벗어난 페이지 요청 시에도 예외가 아니라 빈 목록이 반환되는지 검증
+	 */
+	@Test
+	@DisplayName("상품 목록 조회 - 범위를 벗어난 페이지 요청 케이스 검증")
+	void GetProductList_OutOfRangePage() {
+		//given
+		int page = 5;
+		int size = 20;
+
+		Page<Product> emptyPage = new PageImpl<>(
+			List.of(),
+			PageRequest.of(page, size, Sort.by("createdAt").descending()),
+			0
+		);
+
+		given(productRepository.findAll(any(PageRequest.class))).willReturn(emptyPage);
+
+		//when
+		GetProductListResponse res = productService.getProductList(page, size);
+
+		//then
+		assertThat(res).isNotNull();
+		assertThat(res.getPage()).isEqualTo(page);
+		assertThat(res.getProductList()).isNotNull();
+		assertThat(res.getProductList().size()).isEqualTo(0);
+		assertThat(res.isHasNext()).isFalse();
+
+		verify(productRepository).findAll(any(PageRequest.class));
+	}
 }
