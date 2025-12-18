@@ -529,4 +529,39 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verify(productRepository).findById(productId);
 	}
+
+	/**
+	 * 상품 삭제(Soft Delete) 성공 케이스를 검증합니다.
+	 * 판매자 조회 성공 -> SELLER 권한 검증 -> 상품 조회 성공 -> 소유자 검증 -> 상태 DELETED 변경
+	 */
+	@Test
+	@DisplayName("상품 삭제 성공 - Soft Delete 처리")
+	void SuccessCaseDeleteProduct() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getId()).willReturn(sellerId);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		User productSeller = mock(User.class);
+		given(productSeller.getId()).willReturn(sellerId);
+
+		Product product = mock(Product.class);
+		given(product.getSeller()).willReturn(productSeller);
+		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		// when
+		productService.deleteProduct(productId, sellerId);
+
+		// then
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+		verify(product).delete();
+	}
+
 }
