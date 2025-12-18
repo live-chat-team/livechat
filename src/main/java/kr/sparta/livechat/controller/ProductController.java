@@ -3,6 +3,7 @@ package kr.sparta.livechat.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +30,7 @@ import lombok.RequiredArgsConstructor;
  * ProductController 클래스입니다.
  * <p>
  * 상품관리에 대한 CRUD API 요청을 처리하는 컨트롤러입니다.
- * 현재 기준으로는 상품 등록에 대한 API 만 구현되어 있습니다.
+ * 상품 등록/조회/수정/삭제 API를 제공합니다.
  * </p>
  *
  * @author 재원
@@ -104,7 +105,7 @@ public class ProductController {
 	 * @param userDetails 인증된 사용자 정보
 	 * @return 수정된 상품 정보 응답
 	 */
-	@PatchMapping("{productId}")
+	@PatchMapping("/{productId}")
 	public ResponseEntity<PatchProductResponse> patchProduct(
 		@PathVariable Long productId,
 		@RequestBody PatchProductRequest request,
@@ -118,5 +119,21 @@ public class ProductController {
 			productService.patchProduct(productId, request, userDetails.getUserId());
 
 		return ResponseEntity.ok(response);
+	}
+
+	/**
+	 * 상품 삭제(Soft Delete)를 진행합니다.
+	 *
+	 * @param productId   상품 식별자
+	 * @param userDetails 인증된 사용자 정보
+	 * @return 삭제 성공 응답 (No Content)
+	 */
+	@DeleteMapping("/{productId}")
+	public ResponseEntity<Void> deleteProduct(
+		@PathVariable Long productId,
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		productService.deleteProduct(productId, userDetails.getUserId());
+		return ResponseEntity.noContent().build();
 	}
 }
