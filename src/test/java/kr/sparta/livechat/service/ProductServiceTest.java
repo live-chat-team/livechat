@@ -24,6 +24,8 @@ import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.dto.product.PatchProductRequest;
+import kr.sparta.livechat.dto.product.PatchProductResponse;
 import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
@@ -376,5 +378,56 @@ public class ProductServiceTest {
 		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
 
 		verify(productRepository).findById(productId);
+	}
+
+	/**
+	 * 상품 수정 성공 케이스를 검증합니다.
+	 * 판매자 조회 성공 -> SELLER 권한 검증 -> 요청 유효성 검증 -> 상품 조회 성공 -> 소유자 검증 -> 부분 수정 반영
+	 */
+	@Test
+	@DisplayName("상품 수정 성공 - 수정 요청 필드 반영")
+	void SuccessCasePatchProduct() {
+		//given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getId()).willReturn(sellerId);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		User productSeller = mock(User.class);
+		given(productSeller.getId()).willReturn(sellerId);
+
+		Product product = Product.builder()
+			.name("토르의 망치")
+			.price(3000000)
+			.description("선택받은 자만 들 수 있는 망치")
+			.seller(productSeller)
+			.status(ProductStatus.ONSALE)
+			.build();
+
+		PatchProductRequest req = new PatchProductRequest(
+			null,
+			null,
+			"선택받은 자만 들 수 있는 망치, A급입니다.",
+			ProductStatus.SOLDOUT
+		);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		//when
+		PatchProductResponse res = productService.patchProduct(productId, req, sellerId);
+
+		//then
+		assertThat(res).isNotNull();
+		assertThat(product.getName()).isEqualTo("토르의 망치");
+		assertThat(product.getPrice()).isEqualTo(3000000);
+		assertThat(product.getDescription()).isEqualTo("선택받은 자만 들 수 있는 망치, A급입니다.");
+		assertThat(product.getStatus()).isEqualTo(ProductStatus.SOLDOUT);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+
 	}
 }
