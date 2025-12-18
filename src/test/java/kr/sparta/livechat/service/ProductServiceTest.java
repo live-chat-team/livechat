@@ -463,4 +463,42 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verifyNoInteractions(productRepository);
 	}
+
+	/**
+	 * 상품 수정 실패 - 판매자 권한이 아닐 시 PRODUCT_ACCESS_DENIED 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 판매자 권한 없음")
+	void FailCasePatchProduct_NotSellerRole() {
+		//given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User buyer = User.builder()
+			.email("buyer@test.com")
+			.name("구매자")
+			.password("wantbuy123!")
+			.role(Role.BUYER)
+			.build();
+
+		PatchProductRequest req = new PatchProductRequest(
+			"수정상품",
+			1000,
+			"수정 설명",
+			ProductStatus.SOLDOUT
+		);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(buyer));
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.patchProduct(productId, req, sellerId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ACCESS_DENIED);
+
+		verify(userRepository).findById(sellerId);
+		verifyNoInteractions(productRepository);
+	}
 }
