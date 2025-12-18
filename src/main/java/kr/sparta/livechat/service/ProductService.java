@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
@@ -123,6 +124,7 @@ public class ProductService {
 	 * @return 수정된 상품 정보 응답 DTO
 	 * @throws CustomException 400(입력값/빈 바디), 403(권한/소유자 불일치), 404(상품 없음)
 	 */
+	@Transactional
 	public PatchProductResponse patchProduct(Long productId, PatchProductRequest request, Long currentUserId) {
 
 		if (productId == null || productId <= 0) {
