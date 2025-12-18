@@ -387,4 +387,37 @@ public class ProductControllerTest {
 
 		verifyNoInteractions(productService);
 	}
+
+	/**
+	 * 상품 수정 실패 케이스 - 판매자 권한 없음(403)을 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 판매자 권한 없을 경우 403 에러 반환 ")
+	void patchProduct_Fail_AccessDenied() throws Exception {
+		// given
+		loginAs(1L, Role.BUYER);
+		Long productId = 1L;
+
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "수정된 토르의 망치");
+		body.put("price", 3100000);
+		body.put("description", "수정된 설명");
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		given(productService.patchProduct(anyLong(), any(), anyLong()))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED));
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isForbidden())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(403))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ACCESS_DENIED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ACCESS_DENIED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
+	}
 }
