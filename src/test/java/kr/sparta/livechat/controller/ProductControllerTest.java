@@ -8,25 +8,33 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import kr.sparta.livechat.config.SecurityConfig;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.entity.Role;
+import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
-import kr.sparta.livechat.global.exception.GlobalExceptionHandler;
+import kr.sparta.livechat.repository.UserRepository;
+import kr.sparta.livechat.security.CustomUserDetails;
+import kr.sparta.livechat.service.AuthService;
+import kr.sparta.livechat.service.JwtService;
 import kr.sparta.livechat.service.ProductService;
 
 /**
@@ -37,12 +45,11 @@ import kr.sparta.livechat.service.ProductService;
  * </p>
  *
  * @author 재원
- * @version 1.0
+ * @version 1.1
  * @since 2025. 12. 16.
  */
 @WebMvcTest(controllers = ProductController.class)
-@Import(GlobalExceptionHandler.class)
-@AutoConfigureMockMvc(addFilters = false)
+@Import(SecurityConfig.class)
 @TestPropertySource(properties = "server.port=0")
 public class ProductControllerTest {
 
@@ -54,8 +61,35 @@ public class ProductControllerTest {
 
 	@MockitoBean
 	private ProductService productService;
-	@Autowired
-	private GlobalExceptionHandler globalExceptionHandler;
+
+	@MockitoBean
+	private JwtService jwtService;
+
+	@MockitoBean
+	private AuthService authService;
+
+	@MockitoBean
+	private UserRepository userRepository;
+
+	private void loginAsSeller(Long userId) {
+		User user = mock(User.class);
+		given(user.getId()).willReturn(userId);
+		given(user.getEmail()).willReturn("test@test.com");
+		given(user.getPassword()).willReturn("pw");
+		given(user.getRole()).willReturn(Role.SELLER);
+
+		CustomUserDetails userDetails = new CustomUserDetails(user);
+
+		UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+			userDetails, null, userDetails.getAuthorities()
+		);
+		SecurityContextHolder.getContext().setAuthentication(auth);
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		SecurityContextHolder.clearContext();
+	}
 
 	/**
 	 * 상품 등록 성공 케이스를 검증합니다.
