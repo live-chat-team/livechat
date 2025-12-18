@@ -116,6 +116,6 @@ public class ProductController {
 		PatchProductResponse response =
 			productService.patchProduct(productId, request, userDetails.getUserId());
 
-		return ResponseEntity.ok(response);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }
