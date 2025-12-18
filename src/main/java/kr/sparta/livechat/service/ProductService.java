@@ -81,7 +81,7 @@ public class ProductService {
 			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
 		}
 
-		if (request.getDescription() != null || request.getDescription().isBlank()) {
+		if (request.getDescription() != null && request.getDescription().isBlank()) {
 			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
 		}
 	}

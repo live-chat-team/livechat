@@ -38,7 +38,7 @@ import kr.sparta.livechat.repository.UserRepository;
  * ProductServiceTest 테스트 클래스입니다.
  * <p>
  * 대상 클래스(또는 메서드): {@link ProductService#createProduct(CreateProductRequest, Long)}
- * 판매자의 고유 식별자를 임시 값으로 전달하는 흐름을 검증합니다.
+ * JWT 인증을 통해 식별된 사용자 식별자(currentUserId)를 전달받아 처리하는 흐름을 검증합니다.
  * </p>
  *
  * @author 재원
@@ -66,12 +66,9 @@ public class ProductServiceTest {
 		// given
 		Long sellerId = 1L;
 
-		User seller = User.builder()
-			.email("thor@realhammer.com")
-			.name("토르")
-			.password("realthunder123!")
-			.role(Role.SELLER)
-			.build();
+		User seller = mock(User.class);
+		given(seller.getId()).willReturn(sellerId);
+		given(seller.getRole()).willReturn(Role.SELLER);
 
 		CreateProductRequest req = new CreateProductRequest(
 			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
@@ -127,12 +124,8 @@ public class ProductServiceTest {
 		//given
 		Long sellerId = 1L;
 
-		User buyer = User.builder()
-			.email("buyer@test.com")
-			.name("구매자")
-			.password("wantbuy123!")
-			.role(Role.BUYER)
-			.build();
+		User buyer = mock(User.class);
+		given(buyer.getRole()).willReturn(Role.BUYER);
 
 		CreateProductRequest req = new CreateProductRequest(
 			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
@@ -160,12 +153,8 @@ public class ProductServiceTest {
 		//given
 		Long sellerId = 1L;
 
-		User seller = User.builder()
-			.email("thor@realhammer.com")
-			.name("토르")
-			.password("realthunder123!")
-			.role(Role.SELLER)
-			.build();
+		User seller = mock(User.class);
+		given(seller.getRole()).willReturn(Role.SELLER);
 
 		CreateProductRequest req = new CreateProductRequest(
 			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
