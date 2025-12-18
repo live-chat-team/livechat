@@ -461,4 +461,24 @@ public class ProductControllerTest {
 
 		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
 	}
+
+	/**
+	 * 상품 삭제 성공 케이스를 검증합니다.
+	 * 인증된 판매자가 삭제 요청을 수행하면 204 응답 처리가 되는지 확인합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 성공 - 인증된 판매자의 삭제 요청 시 204 응답")
+	void deleteProduct_Success_AuthenticatedSeller() throws Exception {
+		//given
+		loginAsSeller(1L);
+		Long productId = 1L;
+		willDoNothing().given(productService).deleteProduct(productId, 1L);
+
+		//when & then
+		mockMvc.perform(delete("/api/products/{productId}", productId))
+			.andExpect(status().isNoContent());
+
+		then(productService).should(times(1)).deleteProduct(productId, 1L);
+	}
+
 }
