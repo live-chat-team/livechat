@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.domain.role.ProductStatus;
+import lombok.Builder;
 import lombok.Getter;
 
 /**
@@ -17,6 +18,7 @@ import lombok.Getter;
  * @since 2025. 12. 18.
  */
 @Getter
+@Builder
 public class PatchProductResponse {
 
 	private final Long productId;
