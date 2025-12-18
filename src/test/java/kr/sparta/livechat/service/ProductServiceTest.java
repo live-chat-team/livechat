@@ -501,4 +501,43 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verifyNoInteractions(productRepository);
 	}
+
+	/**
+	 * 상품 수정 실패 - 수정 대상 상품이 존재하지 않을 때 PRODUCT_NOT_FOUND 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 상품이 존재하지 않음")
+	void FailCasePatchProduct_ProductNotFound() {
+		// given
+		Long productId = 999L;
+		Long sellerId = 1L;
+
+		User currentUser = User.builder()
+			.email("seller@test.com")
+			.name("판매자")
+			.password("password123!")
+			.role(Role.SELLER)
+			.build();
+
+		PatchProductRequest req = new PatchProductRequest(
+			"수정상품",
+			1000,
+			"수정 설명",
+			ProductStatus.SOLDOUT
+		);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.empty());
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.patchProduct(productId, req, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+	}
 }
