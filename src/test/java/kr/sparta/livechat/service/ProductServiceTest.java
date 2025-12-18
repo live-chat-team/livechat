@@ -564,4 +564,63 @@ public class ProductServiceTest {
 		verify(product).delete();
 	}
 
+	/**
+	 * 상품 삭제 실패 - 이미 삭제된 상품 요청 시 PRODUCT_ALREADY_DELETED 반환 여부를 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 이미 삭제된 상품")
+	void FailCaseDeleteProduct_AlreadyDeleted() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		Product product = mock(Product.class);
+		given(product.getStatus()).willReturn(ProductStatus.DELETED);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.deleteProduct(productId, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ALREADY_DELETED);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+		verify(product, never()).delete();
+	}
+
+	/**
+	 * 상품 삭제 실패 - 판매자 권한이 아닐 시 PRODUCT_ACCESS_DENIED 반환 여부를 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 판매자 권한 없음")
+	void FailCaseDeleteProduct_NotSellerRole() {
+		// given
+		Long productId = 1L;
+		Long userId = 1L;
+
+		User buyer = mock(User.class);
+		given(buyer.getRole()).willReturn(Role.BUYER);
+
+		given(userRepository.findById(userId)).willReturn(Optional.of(buyer));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.deleteProduct(productId, userId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ACCESS_DENIED);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(productRepository);
+	}
+
 }
