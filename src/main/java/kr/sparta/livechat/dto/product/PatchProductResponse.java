@@ -2,6 +2,7 @@ package kr.sparta.livechat.dto.product;
 
 import java.time.LocalDateTime;
 
+import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.domain.role.ProductStatus;
 import lombok.Getter;
 
@@ -49,5 +50,30 @@ public class PatchProductResponse {
 		this.status = status;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
+	}
+
+	public static PatchProductResponse from(Product product) {
+		if (product == null) {
+			return null;
+		}
+
+		Long sellerId;
+
+		if (product.getSeller() != null) {
+			sellerId = product.getSeller().getId();
+		} else {
+			sellerId = null;
+		}
+
+		return new PatchProductResponse(
+			product.getId(),
+			product.getName(),
+			product.getPrice(),
+			product.getDescription(),
+			sellerId,
+			product.getStatus(),
+			product.getCreatedAt(),
+			product.getUpdatedAt()
+		);
 	}
 }
