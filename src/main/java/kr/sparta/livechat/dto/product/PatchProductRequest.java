@@ -25,4 +25,17 @@ public class PatchProductRequest {
 	private String description;
 	private ProductStatus status;
 
+	/**
+	 * PATCH 요청이 빈 바디인지 여부를 판단합니다.
+	 * <p>
+	 * name, price, description, status 필드가 모두 그대로인 경우 수정할 내용이 없는 요청으로 간주합니다.
+	 * 빈 바디 요청은 유효하지 않은 것으로 약속하여 컨트롤러 또는 서비스 레이어에서 {@code PRODUCT_INVALID_INPUT} 예외를 발생시켜 처리합니다.
+	 * </p>
+	 *
+	 * @return 모든 수정 대상 필드가 {@code null}이면 {@code true}, 그렇지 않으면 {@code false}
+	 */
+	public boolean isEmpty() {
+		return name == null && price == null && description == null && status == null;
+	}
+
 }
