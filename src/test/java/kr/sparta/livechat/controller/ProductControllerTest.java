@@ -368,7 +368,7 @@ public class ProductControllerTest {
 	 * @throws Exception CustomException 예외처리
 	 */
 	@Test
-	@DisplayName("상품 수정 실패 - 빈 바디 요청으이면 400 Bad Request")
+	@DisplayName("상품 수정 실패 - 빈 바디 요청이면 400 Bad Request")
 	void patchProduct_Fail_EmptyBody() throws Exception {
 		// given
 		loginAsSeller(1L);
@@ -416,6 +416,39 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ACCESS_DENIED.getCode()))
 			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ACCESS_DENIED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
+	}
+
+	/**
+	 * 상품 수정 실패 케이스 - 수정 대상 상품 없음(404)을 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 상품을 찾을 수 없으면 404 에러 반환")
+	void patchProduct_Fail_ProductNotFound() throws Exception {
+		// given
+		loginAsSeller(1L);
+		Long productId = 999L;
+
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "수정된 토르의 망치");
+		body.put("price", 3100000);
+		body.put("description", "수정된 설명");
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		given(productService.patchProduct(anyLong(), any(), anyLong()))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(404))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_NOT_FOUND.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_NOT_FOUND.getMessage()))
 			.andExpect(jsonPath("$.timestamp").exists());
 
 		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
