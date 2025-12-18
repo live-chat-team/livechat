@@ -1,6 +1,8 @@
 package kr.sparta.livechat.controller;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -8,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import kr.sparta.livechat.dto.UserLoginRequest;
 import kr.sparta.livechat.dto.UserLoginResponse;
@@ -67,17 +70,17 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<UserLoginResponse> login(
 		@Valid @RequestBody UserLoginRequest request,
-		jakarta.servlet.http.HttpServletResponse response) {
+		HttpServletResponse response) {
 
 		UserLoginResponse loginResponse = authService.login(request);
-		org.springframework.http.ResponseCookie refreshTokenCookie = org.springframework.http.ResponseCookie.from(
+		ResponseCookie refreshTokenCookie = ResponseCookie.from(
 				"refreshToken", loginResponse.getRefreshToken())
 			.httpOnly(true)
 			.path("/")
 			.maxAge(7 * 24 * 60 * 60)
 			.build();
 
-		response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+		response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
 
 		return ResponseEntity.ok(loginResponse);
 	}
@@ -93,29 +96,25 @@ public class AuthController {
 	@PostMapping("/logout")
 	public ResponseEntity<UserLogoutResponse> logout(
 		@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-		jakarta.servlet.http.HttpServletResponse response) {
+		HttpServletResponse response) {
 
-		String accessToken = null;
 		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-			accessToken = authorizationHeader.substring(7);
-		}
-
-		if (accessToken != null) {
+			String accessToken = authorizationHeader.substring(7);
 			authService.logout(accessToken);
 		}
 
-		org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("refreshToken",
-				"")
+		ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "")
 			.path("/")
 			.maxAge(0)
 			.httpOnly(true)
 			.build();
 
-		response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
-		UserLogoutResponse logoutResponse = UserLogoutResponse.builder()
-			.message("로그아웃 되었습니다.쿠키가 삭제되었습니다.")
-			.build();
+		response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
 
-		return ResponseEntity.ok(logoutResponse);
+		return ResponseEntity.ok(
+			UserLogoutResponse.builder()
+				.message("로그아웃 되었습니다.쿠키가 삭제되었습니다.")
+				.build()
+		);
 	}
 }
