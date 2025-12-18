@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kr.sparta.livechat.domain.entity.Product;
+import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
@@ -116,7 +117,7 @@ public class ProductService {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-		Page<Product> pageResult = productRepository.findAll(pageable);
+		Page<Product> pageResult = productRepository.findAllByStatusNot(ProductStatus.DELETED, pageable);
 
 		List<ProductListItem> productList = pageResult.getContent().stream().map(ProductListItem::new).toList();
 
@@ -137,7 +138,7 @@ public class ProductService {
 			throw new CustomException((ErrorCode.PRODUCT_INVALID_INPUT));
 		}
 
-		Product product = productRepository.findById(productId)
+		Product product = productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED)
 			.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
 		return GetProductDetailResponse.from(product);
@@ -155,6 +156,7 @@ public class ProductService {
 	 * @return 수정된 상품 정보 응답 DTO
 	 * @throws CustomException 400(입력값/빈 바디), 403(권한/소유자 불일치), 404(상품 없음)
 	 */
+	@Transactional
 	public PatchProductResponse patchProduct(Long productId, PatchProductRequest request, Long currentUserId) {
 
 		if (productId == null || productId <= 0) {
@@ -188,6 +190,10 @@ public class ProductService {
 		Product product = productRepository.findById(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
+		if (product.getStatus() == ProductStatus.DELETED) {
+			throw new CustomException(ErrorCode.PRODUCT_ALREADY_DELETED);
+		}
+
 		if (!product.getSeller().getId().equals(currentUser.getId())) {
 			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
 		}
@@ -200,5 +206,39 @@ public class ProductService {
 		);
 
 		return PatchProductResponse.from(product);
+	}
+
+	/**
+	 * 상품 삭제 (Soft Delete)를 진행합니다.
+	 *
+	 * @param productId     상품 고유 식별자
+	 * @param currentUserId 로그인한 사용자의 식별자
+	 */
+	@Transactional
+	public void deleteProduct(Long productId, Long currentUserId) {
+
+		if (productId == null || productId <= 0) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+
+		User currentUser = userRepository.findById(currentUserId)
+			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
+
+		if (currentUser.getRole() != Role.SELLER) {
+			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
+		}
+
+		Product product = productRepository.findById(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+		if (product.getStatus() == ProductStatus.DELETED) {
+			throw new CustomException(ErrorCode.PRODUCT_ALREADY_DELETED);
+		}
+
+		if (!product.getSeller().getId().equals(currentUser.getId())) {
+			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
+		}
+
+		product.delete();
 	}
 }
