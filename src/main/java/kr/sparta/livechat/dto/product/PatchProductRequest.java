@@ -1,6 +1,7 @@
 package kr.sparta.livechat.dto.product;
 
 import kr.sparta.livechat.domain.role.ProductStatus;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 public class PatchProductRequest {
 	private String name;
 	private Integer price;
