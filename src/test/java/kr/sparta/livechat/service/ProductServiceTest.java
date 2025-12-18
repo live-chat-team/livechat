@@ -430,4 +430,37 @@ public class ProductServiceTest {
 		verify(productRepository).findById(productId);
 
 	}
+
+	/**
+	 * 상품 수정 실패 - 빈 바디 요청 시 PRODUCT_INVALID_INPUT 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 빈 바디 요청")
+	void FailCasePatchProduct_EmptyBody() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = User.builder()
+			.email("seller@test.com")
+			.name("판매자")
+			.password("password123!")
+			.role(Role.SELLER)
+			.build();
+
+		PatchProductRequest emptyReq = new PatchProductRequest(null, null, null, null);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.patchProduct(productId, emptyReq, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_INVALID_INPUT);
+
+		verify(userRepository).findById(sellerId);
+		verifyNoInteractions(productRepository);
+	}
 }
