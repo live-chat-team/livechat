@@ -481,4 +481,29 @@ public class ProductControllerTest {
 		then(productService).should(times(1)).deleteProduct(productId, 1L);
 	}
 
+	/**
+	 * 상품 삭제 실패 - 기삭제된 상품에 대한 요청 진행 시 409 에러 반환 여부 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 기삭제된 상품 삭제 요청 시 409 응답")
+	void deleteProduct_Fail_AlreadyDeleted() throws Exception {
+		//given
+		loginAsSeller(1L);
+		Long productId = 1L;
+
+		willThrow(new CustomException(ErrorCode.PRODUCT_ALREADY_DELETED))
+			.given(productService).deleteProduct(productId, 1L);
+
+		//when & then
+		mockMvc.perform(delete("/api/products/{productId}", productId)
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(409))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ALREADY_DELETED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ALREADY_DELETED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).deleteProduct(productId, 1L);
+	}
 }
