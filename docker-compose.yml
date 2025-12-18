@@ -38,7 +38,7 @@ services:
     volumes:
       - my-db-volume:/var/lib/mysql
     networks:
-      - app-network
+      - livechat-network
 
 volumes:
   my-db-volume:
