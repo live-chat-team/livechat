@@ -358,4 +358,33 @@ public class ProductControllerTest {
 
 		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
 	}
+
+	/**
+	 * 상품 수정 실패 케이스 - 빈 바디 요청 시 케이스를 검증합니다.
+	 * <p>
+	 * 인증된 SELLER 사용자가 아무런 내용도 수정하지 않고 PATCH 요청을 수행하면 400으로 처리되는지 확인합니다.
+	 * </p>
+	 *
+	 * @throws Exception CustomException 예외처리
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 빈 바디 요청으이면 400 Bad Request")
+	void patchProduct_Fail_EmptyBody() throws Exception {
+		// given
+		loginAsSeller(1L);
+		Long productId = 1L;
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_INVALID_INPUT.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_INVALID_INPUT.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		verifyNoInteractions(productService);
+	}
 }
