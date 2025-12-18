@@ -14,6 +14,7 @@ package kr.sparta.livechat.domain.role;
 public enum ProductStatus {
 
 	ONSALE,
-	SOLDOUT
+	SOLDOUT,
+	DELETED
 
 }
