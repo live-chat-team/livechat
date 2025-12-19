@@ -21,7 +21,7 @@ public class GetProductDetailResponse {
 
 	private final Long productId;
 	private final String name;
-	private final int price;
+	private final Integer price;
 	private final String description;
 	private final Long sellerId;
 	private final ProductStatus status;

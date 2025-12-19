@@ -1,8 +1,5 @@
 package kr.sparta.livechat.repository;
 
-import java.awt.print.Pageable;
-
-import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import kr.sparta.livechat.domain.entity.Product;
@@ -21,5 +18,4 @@ import kr.sparta.livechat.entity.User;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 	boolean existsBySellerAndName(User seller, String name);
 
-	Page<Product> findAll(Pageable pageable);
 }
