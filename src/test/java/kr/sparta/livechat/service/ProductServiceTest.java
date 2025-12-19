@@ -3,6 +3,7 @@ package kr.sparta.livechat.service;
 import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.BDDMockito.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,8 +19,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import kr.sparta.livechat.domain.entity.Product;
+import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
@@ -291,5 +294,87 @@ public class ProductServiceTest {
 		assertThat(res.isHasNext()).isFalse();
 
 		verify(productRepository).findAll(any(PageRequest.class));
+	}
+
+	/**
+	 * 상품 상세 조회 성공 케이스를 검증합니다.
+	 * productId 유효성 검증 -> 응답 매핑 DTO 반환
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 성공 케이스")
+	void SuccessCaseGetProductDetail() {
+		//given
+		Long productId = 1L;
+		LocalDateTime createdAt = LocalDateTime.parse("2025-12-09T14:06:47");
+
+		User seller = mock(User.class);
+		given(seller.getId()).willReturn(1L);
+
+		Product product = mock(Product.class);
+		given(product.getId()).willReturn(productId);
+		given(product.getName()).willReturn("토르의 망치");
+		given(product.getPrice()).willReturn(3000000);
+		given(product.getDescription()).willReturn("선택받은 자만 들 수 있는 망치");
+		given(product.getSeller()).willReturn(seller);
+		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
+		given(product.getCreatedAt()).willReturn(createdAt);
+
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		//when
+		GetProductDetailResponse res = productService.getProductDetail(productId);
+
+		//then
+		assertThat(res).isNotNull();
+		assertThat(res.getProductId()).isEqualTo(productId);
+		assertThat(res.getName()).isEqualTo("토르의 망치");
+		assertThat(res.getPrice()).isEqualTo(3000000);
+		assertThat(res.getDescription()).isEqualTo("선택받은 자만 들 수 있는 망치");
+		assertThat(res.getSellerId()).isEqualTo(1L);
+		assertThat(res.getStatus()).isEqualTo(ProductStatus.ONSALE);
+		assertThat(res.getCreatedAt()).isEqualTo(createdAt);
+
+		verify(productRepository).findById(productId);
+	}
+
+	/**
+	 * 올바르지 않은 상품 식별자로 상세조회 요청 시 PRODUCT_INVALID_INPUT 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 실패 - 유효성 검증 실패")
+	void FailCaseGetProductDetail_InvalidInput() {
+		//given
+		Long invalidId = 0L;
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.getProductDetail(invalidId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_INVALID_INPUT);
+
+		verifyNoInteractions(productRepository);
+	}
+
+	/**
+	 * 등록되지 않은 상품 식별자로 상세조회 요청 시 PRODUCT_NOT_FOUND 에러 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 상세 조회 실패 - 상품이 존재하지 않음")
+	void FailCaseGetProductDetail_ProductNotFound() {
+		//given
+		Long productId = 999L;
+		given(productRepository.findById(productId)).willReturn(Optional.empty());
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.getProductDetail(productId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+		verify(productRepository).findById(productId);
 	}
 }
