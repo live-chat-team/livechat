@@ -53,6 +53,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
 				.requestMatchers("/api/auth/logout").authenticated()
+				.requestMatchers("/ws/**").permitAll()
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(
