@@ -25,6 +25,8 @@ import kr.sparta.livechat.dto.chatroom.CreateChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.UserRepository;
 import kr.sparta.livechat.security.CustomUserDetails;
 import kr.sparta.livechat.service.AuthService;
@@ -125,5 +127,99 @@ public class ChatRoomControllerTest {
 
 		then(chatRoomService).should(times(1))
 			.createChatRoom(eq(productId), eq(buyerId), eq("문의드립니다."));
+	}
+
+	/**
+	 * 채팅방 생성 실패(요청 바디 검증 실패) 케이스를 검증
+	 * 메시지 내용(Content)가 빈 경우 400 응답을 반환하고 서비스는 미호출 된 부분에 대한 검증을 진행합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 생성 실패 - content 빈 값인 경우")
+	void createChatRoom_Fail_EmptyContent() throws Exception {
+		//given
+		Long productId = 1L;
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		CreateChatRoomRequest request = new CreateChatRoomRequest(null);
+
+		String requestJson = objectMapper.writeValueAsString(request);
+
+		// when & then
+		mockMvc.perform(post("/api/products/{productId}/chat-rooms", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isBadRequest());
+
+		verifyNoInteractions(chatRoomService);
+	}
+
+	/**
+	 * 채팅방 생성 실패(구매자 권한 아님)의 경우를 검증
+	 * 구매자가 아닌 사용자가 채팅방 생성 요청을 수행하면 서비스에서 예외가 발생하고
+	 * 전역 예외 처리기가 403 에러와 ErrorResponse를 반환하는지 확인합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 생성 실패 - BUYER가 아닌 사용자가 생성 요청하는 경우")
+	void createChatRoom_Fail_NotBuyer() throws Exception {
+		//given
+		Long productId = 1L;
+		Long sellerId = 20L;
+		loginAs(sellerId, Role.SELLER);
+
+		CreateChatRoomRequest request = new CreateChatRoomRequest("문의드립니다.");
+		String requestJson = objectMapper.writeValueAsString(request);
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_CREATE_ACCESS_DENIED))
+			.given(chatRoomService)
+			.createChatRoom(eq(productId), eq(sellerId), eq("문의드립니다."));
+
+		// when & then
+		mockMvc.perform(post("/api/products/{productId}/chat-rooms", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isForbidden())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(403))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_CREATE_ACCESS_DENIED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_CREATE_ACCESS_DENIED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1))
+			.createChatRoom(eq(productId), eq(sellerId), eq("문의드립니다."));
+	}
+
+	/**
+	 *
+	 */
+	@Test
+	@DisplayName("채팅방 생성 실패 - 이미 열린 채팅방이 존재하는 경우")
+	void createChatRoom_Fail_AlreadyExists() throws Exception {
+		//given
+		Long productId = 1L;
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		CreateChatRoomRequest request = new CreateChatRoomRequest("문의드립니다.");
+		String requestJson = objectMapper.writeValueAsString(request);
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_ALREADY_EXISTS))
+			.given(chatRoomService)
+			.createChatRoom(eq(productId), eq(buyerId), eq("문의드립니다."));
+
+		// when & then
+		mockMvc.perform(post("/api/products/{productId}/chat-rooms", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(409))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_ALREADY_EXISTS.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_ALREADY_EXISTS.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1))
+			.createChatRoom(eq(productId), eq(buyerId), eq("문의드립니다."));
+
 	}
 }
