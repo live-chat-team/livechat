@@ -19,8 +19,6 @@ import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.dto.product.PatchProductRequest;
 import kr.sparta.livechat.dto.product.PatchProductResponse;
-import kr.sparta.livechat.global.exception.CustomException;
-import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.security.CustomUserDetails;
 import kr.sparta.livechat.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -103,16 +101,12 @@ public class ProductController {
 	 * @param userDetails 인증된 사용자 정보
 	 * @return 수정된 상품 정보 응답
 	 */
-	@PatchMapping("{productId}")
+	@PatchMapping("/{productId}")
 	public ResponseEntity<PatchProductResponse> patchProduct(
 		@PathVariable Long productId,
 		@RequestBody PatchProductRequest request,
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
-		if (request == null || request.isEmpty()) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
 		PatchProductResponse response =
 			productService.patchProduct(productId, request, userDetails.getUserId());
 
