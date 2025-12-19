@@ -2,14 +2,19 @@ package kr.sparta.livechat.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
+import kr.sparta.livechat.dto.product.GetProductDetailResponse;
+import kr.sparta.livechat.dto.product.GetProductListResponse;
 import kr.sparta.livechat.service.ProductService;
 import lombok.RequiredArgsConstructor;
 
@@ -46,5 +51,37 @@ public class ProductController {
 
 		CreateProductResponse response = productService.createProduct(request, sellerId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	/**
+	 * 등록된 상품 리스트를 조회합니다.
+	 * 조회 시에는 모든 사용자들이 조회할 수 있습니다.
+	 *
+	 * @param page 상품 목록 조회 페이지 (기본 0페이지)
+	 * @param size 상품 목록 조회 개수 (기본 20개 단위)
+	 * @return 등록된 상품 목록 반환
+	 */
+	@GetMapping
+	public ResponseEntity<GetProductListResponse> getProductList(
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size
+	) {
+		GetProductListResponse response = productService.getProductList(page, size);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 특정 상품의 상세 정보를 조회합니다.
+	 * 로그인 여부와 상관없이 모든 사용자가 조회할 수 있습니다.
+	 *
+	 * @param productId 조회할 상품 식별자
+	 * @return 상품 상세 조회 응답
+	 */
+	@GetMapping("/{productId}")
+	public ResponseEntity<GetProductDetailResponse> getProductDetail(
+		@PathVariable Long productId
+	) {
+		GetProductDetailResponse response = productService.getProductDetail(productId);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }

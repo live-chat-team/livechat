@@ -17,4 +17,5 @@ import kr.sparta.livechat.entity.User;
  */
 public interface ProductRepository extends JpaRepository<Product, Long> {
 	boolean existsBySellerAndName(User seller, String name);
+
 }
