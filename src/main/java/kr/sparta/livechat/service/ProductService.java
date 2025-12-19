@@ -138,20 +138,7 @@ public class ProductService {
 			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
 		}
 
-		if (request == null || (request.getName() == null && request.getPrice() == null
-			&& request.getDescription() == null && request.getStatus() == null)) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
-		if (request.getName() != null && request.getName().isBlank()) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
-		if (request.getPrice() != null && request.getPrice() < 0) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
-		if (request.getDescription() != null && request.getDescription().isBlank()) {
+		if (request == null || request.isEmpty()) {
 			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
 		}
 
