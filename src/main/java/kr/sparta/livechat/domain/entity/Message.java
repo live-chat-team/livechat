@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 import kr.sparta.livechat.domain.role.MessageType;
 import kr.sparta.livechat.entity.User;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
@@ -32,6 +33,7 @@ import lombok.NoArgsConstructor;
  * @since 2025. 12. 19.
  */
 @Entity
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
 	name = "messages",
@@ -65,13 +67,13 @@ public class Message {
 	private ChatRoom room;
 
 	/**
-	 * 메시지를 생성하빈다.
+	 * 메시지를 생성합니다.
 	 *
 	 * @param room    메시지가 속한 채팅방
 	 * @param writer  메시지 작성자
 	 * @param content 메시지 내용
 	 * @param type    메시지 유형
-	 * @return 지생성된 메시지
+	 * @return 생성된 메시지
 	 */
 	public static Message of(ChatRoom room, User writer, String content, MessageType type) {
 		Message message = new Message();
