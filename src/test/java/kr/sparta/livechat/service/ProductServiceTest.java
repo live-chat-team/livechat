@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import kr.sparta.livechat.domain.entity.Product;
@@ -212,7 +213,8 @@ public class ProductServiceTest {
 			products,
 			PageRequest.of(page, size, Sort.by("createdAt").descending()), 2);
 
-		given(productRepository.findAll(any(PageRequest.class))).willReturn(pageResult);
+		given(productRepository.findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class)))
+			.willReturn(pageResult);
 
 		//when
 		GetProductListResponse res = productService.getProductList(page, size);
@@ -231,7 +233,7 @@ public class ProductServiceTest {
 		assertThat(first.getName()).isEqualTo("상품1");
 		assertThat(first.getPrice()).isEqualTo(1000);
 
-		verify(productRepository).findAll(any(PageRequest.class));
+		verify(productRepository).findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class));
 	}
 
 	/**
@@ -272,7 +274,8 @@ public class ProductServiceTest {
 			0
 		);
 
-		given(productRepository.findAll(any(PageRequest.class))).willReturn(emptyPage);
+		given(productRepository.findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class)))
+			.willReturn(emptyPage);
 
 		//when
 		GetProductListResponse res = productService.getProductList(page, size);
@@ -284,7 +287,7 @@ public class ProductServiceTest {
 		assertThat(res.getProductList().size()).isEqualTo(0);
 		assertThat(res.isHasNext()).isFalse();
 
-		verify(productRepository).findAll(any(PageRequest.class));
+		verify(productRepository).findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class));
 	}
 
 	/**
@@ -310,7 +313,8 @@ public class ProductServiceTest {
 		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
 		given(product.getCreatedAt()).willReturn(createdAt);
 
-		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+		given(productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED))
+			.willReturn(Optional.of(product));
 
 		//when
 		GetProductDetailResponse res = productService.getProductDetail(productId);
@@ -325,7 +329,7 @@ public class ProductServiceTest {
 		assertThat(res.getStatus()).isEqualTo(ProductStatus.ONSALE);
 		assertThat(res.getCreatedAt()).isEqualTo(createdAt);
 
-		verify(productRepository).findById(productId);
+		verify(productRepository).findByIdAndStatusNot(productId, ProductStatus.DELETED);
 	}
 
 	/**
@@ -356,7 +360,8 @@ public class ProductServiceTest {
 	void FailCaseGetProductDetail_ProductNotFound() {
 		//given
 		Long productId = 999L;
-		given(productRepository.findById(productId)).willReturn(Optional.empty());
+		given(productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED))
+			.willReturn(Optional.empty());
 
 		//when
 		Throwable thrown = catchThrowable(() -> productService.getProductDetail(productId));
@@ -366,7 +371,7 @@ public class ProductServiceTest {
 		CustomException ce = (CustomException)thrown;
 		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
 
-		verify(productRepository).findById(productId);
+		verify(productRepository).findByIdAndStatusNot(productId, ProductStatus.DELETED);
 	}
 
 	/**
