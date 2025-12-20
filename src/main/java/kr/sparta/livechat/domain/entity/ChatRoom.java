@@ -50,6 +50,9 @@ public class ChatRoom extends BaseTimeEntity {
 	@Column(name = "closed_at")
 	private LocalDateTime closedAt;
 
+	@Column(name = "last_message_sent_at")
+	private LocalDateTime lastMessageSentAt;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "product_id", nullable = false)
 	private Product product;
@@ -69,6 +72,15 @@ public class ChatRoom extends BaseTimeEntity {
 		room.status = ChatRoomStatus.OPEN;
 		room.openedAt = LocalDateTime.now();
 		return room;
+	}
+
+	/**
+	 * 마지막 메시지 전송시간을 갱신합니다.
+	 *
+	 * @param sentAt 메시지 전송일시
+	 */
+	public void touchLastMessageSentAt(LocalDateTime sentAt) {
+		this.lastMessageSentAt = sentAt;
 	}
 
 	/**

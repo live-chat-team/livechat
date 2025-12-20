@@ -83,6 +83,8 @@ public class ChatRoomService {
 
 		Message savedMessage = messageRepository.save(firstMessage);
 
+		savedRoom.touchLastMessageSentAt(savedMessage.getSentAt());
+
 		CreateChatRoomResponse.FirstMessageResponse firstMessageResponse =
 			CreateChatRoomResponse.FirstMessageResponse.of(savedMessage);
 
