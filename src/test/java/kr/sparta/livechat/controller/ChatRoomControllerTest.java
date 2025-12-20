@@ -5,6 +5,9 @@ import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,8 +24,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.sparta.livechat.config.SecurityConfig;
+import kr.sparta.livechat.dto.chatroom.ChatRoomListItem;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -83,6 +88,10 @@ public class ChatRoomControllerTest {
 
 	private void loginAsBuyer(Long userId) {
 		loginAs(userId, Role.BUYER);
+	}
+
+	private void loginAsSeller(Long userId) {
+		loginAs(userId, Role.SELLER);
 	}
 
 	@AfterEach
@@ -190,7 +199,7 @@ public class ChatRoomControllerTest {
 	}
 
 	/**
-	 *
+	 * 기 생성된 채팅방에 대한 상담 채팅방 생성 요청 시 중복 에러코드 응답 확인
 	 */
 	@Test
 	@DisplayName("채팅방 생성 실패 - 이미 열린 채팅방이 존재하는 경우")
@@ -221,5 +230,95 @@ public class ChatRoomControllerTest {
 		then(chatRoomService).should(times(1))
 			.createChatRoom(eq(productId), eq(buyerId), eq("문의드립니다."));
 
+	}
+
+	/**
+	 * 채팅방 목록 조회 성공 케이스를 검증합니다.
+	 * <p>
+	 * 인증된 사용자가 채팅방 목록 조회 요청을 수행하면 200(OK) 상태와 함께 서비스가 반환한 응답 DTO가 JSON으로 직렬화되어 내려오는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("채팅방 목록 조회 성공 - 200 응답과 목록 반환")
+	void getChatRoomList_Success() throws Exception {
+		// given
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		int page = 0;
+		int size = 20;
+
+		// 응답 DTO mock(필요한 getter만 stub)
+		GetChatRoomListResponse response = mock(GetChatRoomListResponse.class);
+		given(response.getPage()).willReturn(page);
+		given(response.getSize()).willReturn(size);
+		given(response.getTotalElements()).willReturn(1L);
+		given(response.getTotalPages()).willReturn(1);
+		given(response.isHasNext()).willReturn(false);
+
+		ChatRoomListItem item = mock(ChatRoomListItem.class);
+		given(item.getChatRoomId()).willReturn(1L);
+		given(item.getProductName()).willReturn("상품명");
+		given(item.getOpponentName()).willReturn("상대방");
+		given(item.getLastMessageSentAt()).willReturn(LocalDateTime.parse("2025-12-20T12:00:00"));
+		given(response.getChatRoomList()).willReturn(List.of(item));
+
+		given(chatRoomService.getChatRoomList(eq(buyerId), eq(page), eq(size)))
+			.willReturn(response);
+
+		// when & then
+		mockMvc.perform(get("/api/chat-rooms")
+				.param("page", String.valueOf(page))
+				.param("size", String.valueOf(size)))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(20))
+			.andExpect(jsonPath("$.totalElements").value(1))
+			.andExpect(jsonPath("$.totalPages").value(1))
+			.andExpect(jsonPath("$.hasNext").value(false))
+
+			.andExpect(jsonPath("$.chatRoomList[0].chatRoomId").value(1))
+			.andExpect(jsonPath("$.chatRoomList[0].productName").value("상품명"))
+			.andExpect(jsonPath("$.chatRoomList[0].opponentName").value("상대방"))
+			.andExpect(jsonPath("$.chatRoomList[0].lastMessageSentAt").exists());
+
+		then(chatRoomService).should(times(1))
+			.getChatRoomList(eq(buyerId), eq(page), eq(size));
+	}
+
+	/**
+	 * 채팅방 생성 실패(요청 바디 검증 실패) 케이스를 검증합니다.
+	 * <p>
+	 * content가 비어있는 요청을 전송하면 400(Bad Request)을 반환하고 서비스는 호출되지 않는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("채팅방 목록 조회 실패 - page/size 파라미터가 유효하지 않은 경우")
+	void getChatRoomList_Fail_InvalidPaging() throws Exception {
+		// given
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		int page = -1;
+		int size = 0;
+
+		willThrow(new CustomException(ErrorCode.COMMON_BAD_PAGINATION))
+			.given(chatRoomService)
+			.getChatRoomList(eq(buyerId), eq(page), eq(size));
+
+		// when & then
+		mockMvc.perform(get("/api/chat-rooms")
+				.param("page", String.valueOf(page))
+				.param("size", String.valueOf(size)))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.COMMON_BAD_PAGINATION.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.COMMON_BAD_PAGINATION.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1))
+			.getChatRoomList(eq(buyerId), eq(page), eq(size));
 	}
 }
