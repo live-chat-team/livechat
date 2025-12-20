@@ -31,6 +31,7 @@ import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ChatRoomRepository;
 import kr.sparta.livechat.repository.MessageRepository;
 import kr.sparta.livechat.repository.ProductRepository;
@@ -213,6 +214,27 @@ public class ChatRoomServiceTest {
 		assertThat(item.getLastMessageSentAt()).isNotNull();
 
 		verify(chatRoomRepository).findByParticipantsUserId(eq(currentUserId), any(Pageable.class));
+	}
+
+	/**
+	 * 채팅방 목록 조회 요청 시 페이지 파라미터 입력값 오류에 따른 실패 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 목록 조회 실패 - 페이지 파라미터 입력값 오류")
+	void FailCaseGetChatRoomList_InvalidPage() {
+		//given
+		Long currentUserId = 10L;
+		int page = 0;
+		int size = 0;
+
+		// when & then
+		Throwable thrown = catchThrowable(() -> chatRoomService.getChatRoomList(currentUserId, page, size));
+
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.COMMON_BAD_PAGINATION);
+
+		verifyNoInteractions(chatRoomRepository);
 	}
 }
 
