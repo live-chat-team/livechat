@@ -25,6 +25,12 @@ public class ChatRoomListItem {
 	private final String opponentName;
 	private final LocalDateTime lastMessageSentAt;
 
+	/**
+	 * {@link ChatRoom} 엔티티를 목록 조회용 DTO로 변환합니다.
+	 *
+	 * @param chatRoom      변환 대상 채팅방 엔티티
+	 * @param currentUserId 현재 로그인 사용자 식별자(상대방 추출 기준)
+	 */
 	public ChatRoomListItem(ChatRoom chatRoom, Long currentUserId) {
 		this.chatRoomId = chatRoom.getId();
 		this.status = chatRoom.getStatus();
