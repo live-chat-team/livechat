@@ -297,7 +297,7 @@ public class ChatRoomServiceTest {
 		assertThat(productInfo.getProductId()).isEqualTo(100L);
 		assertThat(productInfo.getProductName()).isEqualTo("토르의 망치");
 
-		List<ParticipantsListItem> participants = response.getParticipantsListItems();
+		List<ParticipantsListItem> participants = response.getParticipantsList();
 		assertThat(participants).hasSize(2);
 		assertThat(participants)
 			.extracting(ParticipantsListItem::getUserId)
