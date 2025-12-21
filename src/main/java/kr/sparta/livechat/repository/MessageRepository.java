@@ -13,4 +13,6 @@ import kr.sparta.livechat.domain.entity.Message;
  */
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
+	long countByRoom_Id(Long roomId);
+
 }

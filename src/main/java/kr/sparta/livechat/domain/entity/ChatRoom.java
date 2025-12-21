@@ -50,6 +50,9 @@ public class ChatRoom extends BaseTimeEntity {
 	@Column(name = "closed_at")
 	private LocalDateTime closedAt;
 
+	@Column(name = "close_reason")
+	private String reason;
+
 	@Column(name = "last_message_sent_at")
 	private LocalDateTime lastMessageSentAt;
 
@@ -88,7 +91,21 @@ public class ChatRoom extends BaseTimeEntity {
 	 * 종료 일시는 종료 호출이 된 시간을 기준으로 설정합니다.
 	 */
 	public void close() {
+		close(null);
+	}
+
+	/**
+	 * 채팅방을 종료 처리합니다.
+	 * <p>
+	 * 상태를 {@link ChatRoomStatus#CLOSED}로 변경하고 종료 일시를 현재 시각으로 설정합니다.
+	 * 필요 시 종료 사유를 저장합니다.
+	 * </p>
+	 *
+	 * @param reason 종료 사유(선택)
+	 */
+	public void close(String reason) {
 		this.status = ChatRoomStatus.CLOSED;
 		this.closedAt = LocalDateTime.now();
+		this.reason = reason;
 	}
 }
