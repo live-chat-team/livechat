@@ -19,7 +19,10 @@ import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.domain.role.RoleInRoom;
 import kr.sparta.livechat.dto.chatroom.ChatRoomListItem;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
+import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
+import kr.sparta.livechat.dto.chatroom.ProductInfo;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -174,6 +177,54 @@ public class ChatRoomService {
 			roomPage.getTotalPages(),
 			roomPage.hasNext(),
 			items
+		);
+	}
+
+	/**
+	 * 채팅방 목록 조회를 기반으로 본인이 참여자로 있는 채팅방의 상세정보를 조회합니다.
+	 * <p>
+	 * 채팅방 상세 조회 응답은 채팅방의 기본 정보와 문의한 상품의 기본정보, 참여자 정보를 반환합니다.
+	 * </p>
+	 *
+	 * @param chatRoomId    채팅방 고유식별자
+	 * @param currentUserId 로그인한 사용자 식별자
+	 * @return 채팅방 상세 조회 응답 결과
+	 */
+	@Transactional(readOnly = true)
+	public GetChatRoomDetailResponse getChatRoomDetail(Long chatRoomId, Long currentUserId) {
+
+		if (chatRoomId == null || chatRoomId <= 0) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
+		}
+
+		ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+			.orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
+
+		boolean isParticipant = chatRoom.getParticipants().stream()
+			.anyMatch(p -> p.getUser().getId().equals(currentUserId));
+
+		if (!isParticipant) {
+			throw new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED);
+		}
+
+		Product product = chatRoom.getProduct();
+		ProductInfo productInfo = new ProductInfo(product.getId(), product.getName());
+
+		List<ParticipantsListItem> participantsList = chatRoom.getParticipants().stream()
+			.map(p -> new ParticipantsListItem(
+				p.getUser().getId(),
+				p.getUser().getName(),
+				p.getRoleInRoom()
+			))
+			.toList();
+
+		return new GetChatRoomDetailResponse(
+			chatRoom.getId(),
+			chatRoom.getStatus(),
+			chatRoom.getOpenedAt(),
+			chatRoom.getClosedAt(),
+			productInfo,
+			participantsList
 		);
 	}
 }
