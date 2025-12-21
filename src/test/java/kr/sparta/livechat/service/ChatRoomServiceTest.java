@@ -27,7 +27,10 @@ import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.domain.role.RoleInRoom;
 import kr.sparta.livechat.dto.chatroom.ChatRoomListItem;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
+import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
+import kr.sparta.livechat.dto.chatroom.ProductInfo;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -236,5 +239,149 @@ public class ChatRoomServiceTest {
 
 		verifyNoInteractions(chatRoomRepository);
 	}
-}
 
+	/**
+	 * 로그인한 사용자가 참여자로 있는 채팅방 상세 조회 성공 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 성공 - 로그인한 사용자 기반 상세 조회")
+	void SuccessCaseGetChatRoomDetail() {
+		// given
+		Long chatRoomId = 1L;
+		Long currentUserId = 10L;
+
+		User meUser = mock(User.class);
+		given(meUser.getId()).willReturn(currentUserId);
+		given(meUser.getName()).willReturn("재원");
+
+		User opponentUser = mock(User.class);
+		given(opponentUser.getId()).willReturn(20L);
+		given(opponentUser.getName()).willReturn("상대");
+
+		ChatRoomParticipant meParticipant = mock(ChatRoomParticipant.class);
+		given(meParticipant.getUser()).willReturn(meUser);
+		given(meParticipant.getRoleInRoom()).willReturn(RoleInRoom.BUYER);
+
+		ChatRoomParticipant opponentParticipant = mock(ChatRoomParticipant.class);
+		given(opponentParticipant.getUser()).willReturn(opponentUser);
+		given(opponentParticipant.getRoleInRoom()).willReturn(RoleInRoom.SELLER);
+
+		Product product = mock(Product.class);
+		given(product.getId()).willReturn(100L);
+		given(product.getName()).willReturn("토르의 망치");
+
+		LocalDateTime openedAt = LocalDateTime.parse("2025-12-09T15:21:10");
+
+		ChatRoom chatRoom = mock(ChatRoom.class);
+		given(chatRoom.getId()).willReturn(chatRoomId);
+		given(chatRoom.getStatus()).willReturn(ChatRoomStatus.OPEN);
+		given(chatRoom.getOpenedAt()).willReturn(openedAt);
+		given(chatRoom.getClosedAt()).willReturn(null);
+		given(chatRoom.getProduct()).willReturn(product);
+		given(chatRoom.getParticipants()).willReturn(List.of(meParticipant, opponentParticipant));
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
+
+		// when
+		GetChatRoomDetailResponse response = chatRoomService.getChatRoomDetail(chatRoomId, currentUserId);
+
+		// then
+		assertThat(response).isNotNull();
+		assertThat(response.getChatRoomId()).isEqualTo(chatRoomId);
+		assertThat(response.getStatus()).isEqualTo(ChatRoomStatus.OPEN);
+		assertThat(response.getOpenedAt()).isEqualTo(openedAt);
+		assertThat(response.getClosedAt()).isNull();
+
+		ProductInfo productInfo = response.getProductInfo();
+		assertThat(productInfo).isNotNull();
+		assertThat(productInfo.getProductId()).isEqualTo(100L);
+		assertThat(productInfo.getProductName()).isEqualTo("토르의 망치");
+
+		List<ParticipantsListItem> participants = response.getParticipantsListItems();
+		assertThat(participants).hasSize(2);
+		assertThat(participants)
+			.extracting(ParticipantsListItem::getUserId)
+			.containsExactlyInAnyOrder(currentUserId, 20L);
+
+		assertThat(participants)
+			.extracting(ParticipantsListItem::getRoleInRoom)
+			.containsExactlyInAnyOrder(RoleInRoom.BUYER, RoleInRoom.SELLER);
+
+		verify(chatRoomRepository).findById(chatRoomId);
+
+	}
+
+	/**
+	 * 채팅방 상세 조회 요청 시 채팅방 식별자 입력 오류에 따른 실패 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 실패 - 입력값 오류")
+	void FailCaseGetChatRoomDetail_InvalidInput() {
+		// given
+		Long currentUserId = 10L;
+		Long invalidChatRoomId = 0L;
+
+		// when & then
+		assertThatThrownBy(() -> chatRoomService.getChatRoomDetail(invalidChatRoomId, currentUserId))
+			.isInstanceOf(CustomException.class);
+
+		verifyNoInteractions(chatRoomRepository);
+
+	}
+
+	/**
+	 * 로그인한 사용자가 참여자로 있는 채팅방이 아닌 채팅방을 조회 요청 시 실패 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 실패 - 채팅방 조회 권한 없음")
+	void FailCaseGetChatRoomDetail_AccessDenied() {
+		// given
+		Long chatRoomId = 1L;
+		Long currentUserId = 10L;
+
+		User opponentUser = mock(User.class);
+		given(opponentUser.getId()).willReturn(20L);
+
+		ChatRoomParticipant opponentParticipant = mock(ChatRoomParticipant.class);
+		given(opponentParticipant.getUser()).willReturn(opponentUser);
+
+		ChatRoom chatRoom = mock(ChatRoom.class);
+		given(chatRoom.getParticipants()).willReturn(List.of(opponentParticipant));
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
+
+		// when & then
+		Throwable thrown = catchThrowable(() -> chatRoomService.getChatRoomDetail(chatRoomId, currentUserId));
+
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.CHATROOM_ACCESS_DENIED);
+
+		verify(chatRoomRepository).findById(chatRoomId);
+
+	}
+
+	/**
+	 * 채팅방의 상태가 이미 상담 종료되었거나, 생성되지 않은 채팅방 조회 요청 시 실패 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 실패 - 채팅방 조회 불가")
+	void FailCaseGetChatRoomDetail_ChatRoomNotFound() {
+		// given
+		Long chatRoomId = 1L;
+		Long currentUserId = 10L;
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.empty());
+
+		// when & then
+		Throwable thrown = catchThrowable(() -> chatRoomService.getChatRoomDetail(chatRoomId, currentUserId));
+
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.CHATROOM_NOT_FOUND);
+
+		verify(chatRoomRepository).findById(chatRoomId);
+
+	}
+
+}
