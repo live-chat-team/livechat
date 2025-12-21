@@ -32,6 +32,8 @@ import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
 import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomRequest;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.ProductInfo;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
@@ -471,4 +473,165 @@ public class ChatRoomControllerTest {
 		then(chatRoomService).should(times(1)).getChatRoomDetail(eq(chatRoomId), eq(buyerId));
 
 	}
+
+	/**
+	 * 채팅방 상태 변경 성공 케이스를 검증합니다.
+	 * <p>
+	 * 인증된 판매자 권한을 가진 사용자가 채팅방 종료 요청을 수행하면 200(OK)과 함께
+	 * 서비스가 반환한 응답 DTO가 JSON 응답에 포함되는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 성공 - 200 응답")
+	void patchChatRoom_Success() throws Exception {
+		// given
+		Long chatRoomId = 1L;
+		Long sellerId = 10L;
+		loginAsSeller(sellerId);
+
+		PatchChatRoomResponse response = mock(PatchChatRoomResponse.class);
+		given(response.getChatRoomId()).willReturn(chatRoomId);
+		given(response.getStatus()).willReturn(CLOSED);
+		given(response.getReason()).willReturn("상담 종료");
+		given(response.getClosedAt()).willReturn(LocalDateTime.parse("2025-12-20T12:00:00"));
+
+		given(chatRoomService.patchChatRoom(eq(chatRoomId), eq(sellerId), any(PatchChatRoomRequest.class)))
+			.willReturn(response);
+
+		String requestJson = objectMapper.writeValueAsString(
+			new java.util.HashMap<String, Object>() {{
+				put("status", "CLOSED");
+				put("reason", "상담 종료");
+			}}
+		);
+
+		// when & then
+		mockMvc.perform(patch("/api/chat-rooms/{chatRoomId}", chatRoomId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.chatRoomId").value(1))
+			.andExpect(jsonPath("$.status").value("CLOSED"))
+			.andExpect(jsonPath("$.reason").value("상담 종료"))
+			.andExpect(jsonPath("$.closedAt").exists());
+
+		then(chatRoomService).should(times(1))
+			.patchChatRoom(eq(chatRoomId), eq(sellerId), any(PatchChatRoomRequest.class));
+
+	}
+
+	/**
+	 * 채팅방 상태 변경 실패(요청 식별자 유효성 오류) 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 실패 - chatRoomId가 올바르지 않은 경우")
+	void patchChatRoom_Fail_InvalidInput() throws Exception {
+		// given
+		Long invalidChatRoomId = 0L;
+		Long sellerId = 10L;
+		loginAsSeller(sellerId);
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_INVALID_INPUT))
+			.given(chatRoomService)
+			.patchChatRoom(eq(invalidChatRoomId), eq(sellerId), any(PatchChatRoomRequest.class));
+
+		String requestJson = objectMapper.writeValueAsString(
+			new java.util.HashMap<String, Object>() {{
+				put("status", "CLOSED");
+				put("reason", "상담 종료");
+			}}
+		);
+
+		// when & then
+		mockMvc.perform(patch("/api/chat-rooms/{chatRoomId}", invalidChatRoomId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_INVALID_INPUT.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_INVALID_INPUT.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1))
+			.patchChatRoom(eq(invalidChatRoomId), eq(sellerId), any(PatchChatRoomRequest.class));
+
+	}
+
+	/**
+	 * 채팅방 상태 변경 실패(권한 없음) 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 실패 - 권한이 없는 사용자가 요청하는 경우")
+	void patchChatRoom_Fail_AccessDenied() throws Exception {
+		// given
+		Long chatRoomId = 1L;
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED))
+			.given(chatRoomService)
+			.patchChatRoom(eq(chatRoomId), eq(buyerId), any(PatchChatRoomRequest.class));
+
+		String requestJson = objectMapper.writeValueAsString(
+			new java.util.HashMap<String, Object>() {{
+				put("status", "CLOSED");
+				put("reason", "상담 종료");
+			}}
+		);
+
+		// when & then
+		mockMvc.perform(patch("/api/chat-rooms/{chatRoomId}", chatRoomId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isForbidden())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(403))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_ACCESS_DENIED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_ACCESS_DENIED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1))
+			.patchChatRoom(eq(chatRoomId), eq(buyerId), any(PatchChatRoomRequest.class));
+	}
+
+	/**
+	 * 채팅방 상태 변경 실패(이미 종료된 채팅방) 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 실패 - 이미 종료된 채팅방에 대한 요청")
+	void patchChatRoom_Fail_AlreadyClosed() throws Exception {
+		// given
+		Long chatRoomId = 1L;
+		Long sellerId = 10L;
+		loginAsSeller(sellerId);
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_ALREADY_CLOSED))
+			.given(chatRoomService)
+			.patchChatRoom(eq(chatRoomId), eq(sellerId), any(PatchChatRoomRequest.class));
+
+		String requestJson = objectMapper.writeValueAsString(
+			new java.util.HashMap<String, Object>() {{
+				put("status", "CLOSED");
+				put("reason", "상담 종료");
+			}}
+		);
+
+		// when & then
+		mockMvc.perform(patch("/api/chat-rooms/{chatRoomId}", chatRoomId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(409))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_ALREADY_CLOSED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_ALREADY_CLOSED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1))
+			.patchChatRoom(eq(chatRoomId), eq(sellerId), any(PatchChatRoomRequest.class));
+
+	}
+
 }
