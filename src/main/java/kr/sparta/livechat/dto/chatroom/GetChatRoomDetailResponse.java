@@ -23,7 +23,7 @@ public class GetChatRoomDetailResponse {
 	private final LocalDateTime openedAt;
 	private final LocalDateTime closedAt;
 	private final ProductInfo productInfo;
-	private final List<ParticipantsListItem> participantsListItems;
+	private final List<ParticipantsListItem> participantsList;
 
 	/**
 	 * 채팅방 상세세 조회 응답 DTO를 생성합니다.
@@ -42,6 +42,6 @@ public class GetChatRoomDetailResponse {
 		this.openedAt = openedAt;
 		this.closedAt = closedAt;
 		this.productInfo = productInfo;
-		this.participantsListItems = participantsList;
+		this.participantsList = participantsList;
 	}
 }
