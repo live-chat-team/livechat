@@ -1,8 +1,11 @@
 package kr.sparta.livechat.socket;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.service.JwtService;
+import kr.sparta.livechat.service.SocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -37,6 +40,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class StompChannelInterceptor implements ChannelInterceptor {
 
+	private static final Pattern ROOM_SUBSCRIBE_PATTERN =
+		Pattern.compile("^/sub/chat/room/(?<roomId>\\d+)$");
+
+	private final SocketService socketService;
 	private final JwtService jwtService;
 
 	@Override
@@ -54,14 +61,34 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
 			token = token.replace("Bearer ", "");
 
-			if (!jwtService.validateToken(token)) {
-				throw new CustomException(ErrorCode.AUTH_INVALID_TOKEN_FORMAT);
-			}
+			jwtService.validateToken(token);
 
 			Long userId = jwtService.getUserIdFromToken(token);
 			accessor.setUser(new CustomPrincipal(userId));
+
+			return message;
 		}
 
+		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+
+			String destination = accessor.getDestination();
+			if (destination == null) return message;
+
+			Matcher matcher = ROOM_SUBSCRIBE_PATTERN.matcher(destination);
+			if (!matcher.matches()) return message;
+
+			Long roomId = Long.parseLong(matcher.group("roomId"));
+
+			if (!(accessor.getUser() instanceof CustomPrincipal principal)) {
+				throw new CustomException(ErrorCode.AUTH_INVALID_TOKEN_FORMAT);
+			}
+
+			Long userId = principal.getUserId();
+
+			if (!socketService.isParticipant(roomId, userId)) {
+				throw new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED);
+			}
+		}
 		return message;
 	}
 }
