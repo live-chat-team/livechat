@@ -7,6 +7,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.transaction.Transactional;
 import kr.sparta.livechat.domain.entity.Product;
@@ -44,30 +45,61 @@ public class ProductService {
 	/**
 	 * 상품을 등록합니다.
 	 * <p>
-	 * 판매자(User)를 조회한 뒤, 판매자 권한 및 중복 상품 여부를 검증하고 상품을 저장합니다.
+	 * JWT 인증을 통해 식별된 사용자를 기준으로 판매자를 조회한 뒤, 판매자 권한 및 중복 상품 여부를 검증하고 상품을 저장합니다.
 	 * </p>
 	 *
 	 * @param request       상품 등록 요청 데이터
-	 * @param currentUserId 판매자 식별자(임시 단계에서는 고정값을 전달받을 수 있습니다)
+	 * @param currentUserId JWT 인증을 통해 식별된 사용자 식별자
 	 * @return 등록된 상품 정보 응답
+	 * @throws CustomException 사용자를 찾을 수 없거나, 판매자 권한이 없거나, 중복된 상품명이거나, 유효하지 않은 입력인 경우
 	 */
+	@Transactional
 	public CreateProductResponse createProduct(CreateProductRequest request, Long currentUserId) {
+		validateCreateRequest(request);
 
-		User currentUser = userRepository.findById(currentUserId)
-			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
+		User seller = getSellerOrThrow(currentUserId);
 
-		if (currentUser.getRole() != Role.SELLER) {
-			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
-		}
-
-		if (productRepository.existsBySellerAndName(currentUser, request.getName())) {
+		if (productRepository.existsBySellerAndName(seller, request.getName())) {
 			throw new CustomException(ErrorCode.PRODUCT_ALREADY_EXISTS);
 		}
 
-		Product product = Product.create(currentUser, request);
+		Product product = Product.create(seller, request);
 		Product saved = productRepository.save(product);
 
 		return CreateProductResponse.from(saved);
+	}
+
+	private void validateCreateRequest(CreateProductRequest request) {
+		if (request == null) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+
+		if (request.getName() == null || request.getName().isBlank()) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+
+		if (request.getPrice() == null || request.getPrice() < 0) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+
+		if (request.getDescription() != null && request.getDescription().isBlank()) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+	}
+
+	private User getSellerOrThrow(Long currentUserId) {
+		if (currentUserId == null || currentUserId <= 0) {
+			throw new CustomException(ErrorCode.AUTH_USER_NOT_FOUND);
+		}
+
+		User user = userRepository.findById(currentUserId)
+			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
+
+		if (user.getRole() != Role.SELLER) {
+			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
+		}
+
+		return user;
 	}
 
 	/**

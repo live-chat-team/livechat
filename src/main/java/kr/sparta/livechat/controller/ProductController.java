@@ -43,18 +43,19 @@ public class ProductController {
 
 	/**
 	 * 상품을 등록합니다.
-	 * 현재는 인증 연동 전 단계로, 판매자 식별자를 임시로 {@code 1L}로 설정합니다.
-	 * JWT 인증 연동 완료 후에는 인증된 사용자 정보에서 판매자 식별자를 추출하도록 변경해야 합니다.
+	 * JWT 인증된 사용자 기준으로 sellerId를 추출하여 등록합니다.
 	 *
 	 * @param request 상품 등록에 필요한 요청 데이터
 	 * @return 등록된 상품 정보 응답
 	 */
 	@PostMapping
-	public ResponseEntity<CreateProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
-		// TODO(#33): JWT 인증 연동 완료 후, 인증된 사용자 정보에서 sellerId 추출로 변경
-		Long sellerId = 1L;
+	public ResponseEntity<CreateProductResponse> createProduct(
+		@Valid @RequestBody CreateProductRequest request,
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		CreateProductResponse response =
+			productService.createProduct(request, userDetails.getUserId());
 
-		CreateProductResponse response = productService.createProduct(request, sellerId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 

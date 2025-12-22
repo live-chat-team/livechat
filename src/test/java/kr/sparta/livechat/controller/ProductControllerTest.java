@@ -109,6 +109,8 @@ public class ProductControllerTest {
 	@DisplayName("상품 등록 성공 - 201 응답, CreateProductResponse JSON 반환 검증")
 	void createProduct_Success() throws Exception {
 		//given
+		loginAsSeller(1L);
+
 		Map<String, Object> body = new HashMap<>();
 		body.put("name", "토르의 망치");
 		body.put("price", 3000000);
@@ -134,6 +136,8 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.name").value("토르의 망치"))
 			.andExpect(jsonPath("$.price").value(3000000));
 
+		then(productService).should(times(1)).createProduct(any(), eq(1L));
+
 	}
 
 	/**
@@ -146,6 +150,8 @@ public class ProductControllerTest {
 	@DisplayName("상품 등록 실패 - 상품명 중복이면 409와 ErrorResponse를 반환한다")
 	void createProduct_Fail_DuplicateName() throws Exception {
 		// given
+		loginAsSeller(1L);
+
 		Map<String, Object> body = new HashMap<>();
 		body.put("name", "토르의 망치");
 		body.put("price", 3000000);
@@ -165,6 +171,8 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getCode()))
 			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ALREADY_EXISTS.getMessage()))
 			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).createProduct(any(), eq(1L));
 	}
 
 	/**
