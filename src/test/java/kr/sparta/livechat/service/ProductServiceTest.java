@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import kr.sparta.livechat.domain.entity.Product;
@@ -24,6 +25,8 @@ import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.dto.product.PatchProductRequest;
+import kr.sparta.livechat.dto.product.PatchProductResponse;
 import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
@@ -36,7 +39,7 @@ import kr.sparta.livechat.repository.UserRepository;
  * ProductServiceTest 테스트 클래스입니다.
  * <p>
  * 대상 클래스(또는 메서드): {@link ProductService#createProduct(CreateProductRequest, Long)}
- * 판매자의 고유 식별자를 임시 값으로 전달하는 흐름을 검증합니다.
+ * JWT 인증을 통해 식별된 사용자 식별자(currentUserId)를 전달받아 처리하는 흐름을 검증합니다.
  * </p>
  *
  * @author 재원
@@ -64,12 +67,9 @@ public class ProductServiceTest {
 		// given
 		Long sellerId = 1L;
 
-		User seller = User.builder()
-			.email("thor@realhammer.com")
-			.name("토르")
-			.password("realthunder123!")
-			.role(Role.SELLER)
-			.build();
+		User seller = mock(User.class);
+		given(seller.getId()).willReturn(sellerId);
+		given(seller.getRole()).willReturn(Role.SELLER);
 
 		CreateProductRequest req = new CreateProductRequest(
 			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
@@ -125,12 +125,8 @@ public class ProductServiceTest {
 		//given
 		Long sellerId = 1L;
 
-		User buyer = User.builder()
-			.email("buyer@test.com")
-			.name("구매자")
-			.password("wantbuy123!")
-			.role(Role.BUYER)
-			.build();
+		User buyer = mock(User.class);
+		given(buyer.getRole()).willReturn(Role.BUYER);
 
 		CreateProductRequest req = new CreateProductRequest(
 			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
@@ -158,12 +154,8 @@ public class ProductServiceTest {
 		//given
 		Long sellerId = 1L;
 
-		User seller = User.builder()
-			.email("thor@realhammer.com")
-			.name("토르")
-			.password("realthunder123!")
-			.role(Role.SELLER)
-			.build();
+		User seller = mock(User.class);
+		given(seller.getRole()).willReturn(Role.SELLER);
 
 		CreateProductRequest req = new CreateProductRequest(
 			"토르의 망치", 3000000, "선택받은 자만 들 수 있는 망치");
@@ -221,7 +213,8 @@ public class ProductServiceTest {
 			products,
 			PageRequest.of(page, size, Sort.by("createdAt").descending()), 2);
 
-		given(productRepository.findAll(any(PageRequest.class))).willReturn(pageResult);
+		given(productRepository.findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class)))
+			.willReturn(pageResult);
 
 		//when
 		GetProductListResponse res = productService.getProductList(page, size);
@@ -240,7 +233,7 @@ public class ProductServiceTest {
 		assertThat(first.getName()).isEqualTo("상품1");
 		assertThat(first.getPrice()).isEqualTo(1000);
 
-		verify(productRepository).findAll(any(PageRequest.class));
+		verify(productRepository).findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class));
 	}
 
 	/**
@@ -281,7 +274,8 @@ public class ProductServiceTest {
 			0
 		);
 
-		given(productRepository.findAll(any(PageRequest.class))).willReturn(emptyPage);
+		given(productRepository.findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class)))
+			.willReturn(emptyPage);
 
 		//when
 		GetProductListResponse res = productService.getProductList(page, size);
@@ -293,7 +287,7 @@ public class ProductServiceTest {
 		assertThat(res.getProductList().size()).isEqualTo(0);
 		assertThat(res.isHasNext()).isFalse();
 
-		verify(productRepository).findAll(any(PageRequest.class));
+		verify(productRepository).findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class));
 	}
 
 	/**
@@ -319,7 +313,8 @@ public class ProductServiceTest {
 		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
 		given(product.getCreatedAt()).willReturn(createdAt);
 
-		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+		given(productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED))
+			.willReturn(Optional.of(product));
 
 		//when
 		GetProductDetailResponse res = productService.getProductDetail(productId);
@@ -334,7 +329,7 @@ public class ProductServiceTest {
 		assertThat(res.getStatus()).isEqualTo(ProductStatus.ONSALE);
 		assertThat(res.getCreatedAt()).isEqualTo(createdAt);
 
-		verify(productRepository).findById(productId);
+		verify(productRepository).findByIdAndStatusNot(productId, ProductStatus.DELETED);
 	}
 
 	/**
@@ -365,7 +360,8 @@ public class ProductServiceTest {
 	void FailCaseGetProductDetail_ProductNotFound() {
 		//given
 		Long productId = 999L;
-		given(productRepository.findById(productId)).willReturn(Optional.empty());
+		given(productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED))
+			.willReturn(Optional.empty());
 
 		//when
 		Throwable thrown = catchThrowable(() -> productService.getProductDetail(productId));
@@ -375,6 +371,261 @@ public class ProductServiceTest {
 		CustomException ce = (CustomException)thrown;
 		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
 
+		verify(productRepository).findByIdAndStatusNot(productId, ProductStatus.DELETED);
+	}
+
+	/**
+	 * 상품 수정 성공 케이스를 검증합니다.
+	 * 판매자 조회 성공 -> SELLER 권한 검증 -> 요청 유효성 검증 -> 상품 조회 성공 -> 소유자 검증 -> 부분 수정 반영
+	 */
+	@Test
+	@DisplayName("상품 수정 성공 - 수정 요청 필드 반영")
+	void SuccessCasePatchProduct() {
+		//given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getId()).willReturn(sellerId);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		User productSeller = mock(User.class);
+		given(productSeller.getId()).willReturn(sellerId);
+
+		Product product = Product.builder()
+			.name("토르의 망치")
+			.price(3000000)
+			.description("선택받은 자만 들 수 있는 망치")
+			.seller(productSeller)
+			.status(ProductStatus.ONSALE)
+			.build();
+
+		PatchProductRequest req = new PatchProductRequest(
+			null,
+			null,
+			"선택받은 자만 들 수 있는 망치, A급입니다.",
+			ProductStatus.SOLDOUT
+		);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		//when
+		PatchProductResponse res = productService.patchProduct(productId, req, sellerId);
+
+		//then
+		assertThat(res).isNotNull();
+		assertThat(product.getName()).isEqualTo("토르의 망치");
+		assertThat(product.getPrice()).isEqualTo(3000000);
+		assertThat(product.getDescription()).isEqualTo("선택받은 자만 들 수 있는 망치, A급입니다.");
+		assertThat(product.getStatus()).isEqualTo(ProductStatus.SOLDOUT);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+
+	}
+
+	/**
+	 * 상품 수정 실패 - 빈 바디 요청 시 PRODUCT_INVALID_INPUT 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 빈 바디 요청")
+	void FailCasePatchProduct_EmptyBody() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = User.builder()
+			.email("seller@test.com")
+			.name("판매자")
+			.password("password123!")
+			.role(Role.SELLER)
+			.build();
+
+		PatchProductRequest emptyReq = new PatchProductRequest(null, null, null, null);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.patchProduct(productId, emptyReq, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_INVALID_INPUT);
+
+		verify(userRepository).findById(sellerId);
+		verifyNoInteractions(productRepository);
+	}
+
+	/**
+	 * 상품 수정 실패 - 판매자 권한이 아닐 시 PRODUCT_ACCESS_DENIED 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 판매자 권한 없음")
+	void FailCasePatchProduct_NotSellerRole() {
+		//given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User buyer = User.builder()
+			.email("buyer@test.com")
+			.name("구매자")
+			.password("wantbuy123!")
+			.role(Role.BUYER)
+			.build();
+
+		PatchProductRequest req = new PatchProductRequest(
+			"수정상품",
+			1000,
+			"수정 설명",
+			ProductStatus.SOLDOUT
+		);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(buyer));
+
+		//when
+		Throwable thrown = catchThrowable(() -> productService.patchProduct(productId, req, sellerId));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ACCESS_DENIED);
+
+		verify(userRepository).findById(sellerId);
+		verifyNoInteractions(productRepository);
+	}
+
+	/**
+	 * 상품 수정 실패 - 수정 대상 상품이 존재하지 않을 때 PRODUCT_NOT_FOUND 반환여부 검증
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 상품이 존재하지 않음")
+	void FailCasePatchProduct_ProductNotFound() {
+		// given
+		Long productId = 999L;
+		Long sellerId = 1L;
+
+		User currentUser = User.builder()
+			.email("seller@test.com")
+			.name("판매자")
+			.password("password123!")
+			.role(Role.SELLER)
+			.build();
+
+		PatchProductRequest req = new PatchProductRequest(
+			"수정상품",
+			1000,
+			"수정 설명",
+			ProductStatus.SOLDOUT
+		);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.empty());
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.patchProduct(productId, req, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+		verify(userRepository).findById(sellerId);
 		verify(productRepository).findById(productId);
 	}
+
+	/**
+	 * 상품 삭제(Soft Delete) 성공 케이스를 검증합니다.
+	 * 판매자 조회 성공 -> SELLER 권한 검증 -> 상품 조회 성공 -> 소유자 검증 -> 상태 DELETED 변경
+	 */
+	@Test
+	@DisplayName("상품 삭제 성공 - Soft Delete 처리")
+	void SuccessCaseDeleteProduct() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getId()).willReturn(sellerId);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		User productSeller = mock(User.class);
+		given(productSeller.getId()).willReturn(sellerId);
+
+		Product product = mock(Product.class);
+		given(product.getSeller()).willReturn(productSeller);
+		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		// when
+		productService.deleteProduct(productId, sellerId);
+
+		// then
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+		verify(product).delete();
+	}
+
+	/**
+	 * 상품 삭제 실패 - 이미 삭제된 상품 요청 시 PRODUCT_ALREADY_DELETED 반환 여부를 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 이미 삭제된 상품")
+	void FailCaseDeleteProduct_AlreadyDeleted() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		Product product = mock(Product.class);
+		given(product.getStatus()).willReturn(ProductStatus.DELETED);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.deleteProduct(productId, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ALREADY_DELETED);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+		verify(product, never()).delete();
+	}
+
+	/**
+	 * 상품 삭제 실패 - 판매자 권한이 아닐 시 PRODUCT_ACCESS_DENIED 반환 여부를 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 판매자 권한 없음")
+	void FailCaseDeleteProduct_NotSellerRole() {
+		// given
+		Long productId = 1L;
+		Long userId = 1L;
+
+		User buyer = mock(User.class);
+		given(buyer.getRole()).willReturn(Role.BUYER);
+
+		given(userRepository.findById(userId)).willReturn(Optional.of(buyer));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.deleteProduct(productId, userId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ACCESS_DENIED);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(productRepository);
+	}
+
 }
