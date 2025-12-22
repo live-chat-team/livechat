@@ -162,7 +162,11 @@ public class ChatRoomService {
 		Pageable pageable = PageRequest.of(
 			page,
 			size,
-			Sort.by(Sort.Direction.DESC, "lastMessageSentAt", "openedAt"));
+			Sort.by(
+				Sort.Order.desc("lastMessageSentAt").nullsLast(),
+				Sort.Order.desc("openedAt")
+			)
+		);
 
 		Page<ChatRoom> roomPage = chatRoomRepository.findByParticipantsUserId(currentUserId, pageable);
 
