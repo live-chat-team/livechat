@@ -161,7 +161,7 @@ public class AuthServiceTest {
 
 		// when & then
 		CustomException exception = assertThrows(CustomException.class, () -> authService.login(request));
-		assertEquals(ErrorCode.AUTH_INVALID_CREDENTIALS, exception.getErrorCode());
+		assertEquals(ErrorCode.AUTH_USER_NOT_FOUND, exception.getErrorCode());
 		verify(passwordEncoder, never()).matches(anyString(), anyString());
 		verify(jwtService, never()).createAccessToken(anyLong(), any(Role.class));
 	}
