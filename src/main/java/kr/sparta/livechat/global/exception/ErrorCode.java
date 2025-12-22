@@ -59,14 +59,22 @@ public enum ErrorCode {
 	// 채팅방 관리에서 사용할 에러코드
 	CHATROOM_INVALID_STATUS(
 		HttpStatus.BAD_REQUEST, "CHATROOM_INVALD_STATUS", "요청한 채팅방 상태값이 유효하지 않습니다."),
+	CONTENT_MUST_NOT_BLANK(
+		HttpStatus.BAD_REQUEST, "CONTENT_MUST_NOT_BLANK", "상담 메시지를 입력해주세요."),
 	CHATROOM_ACCESS_DENIED(
 		HttpStatus.FORBIDDEN, "CHATROOM_ACCESS_DENIED", "채팅방에 대한 권한이 없습니다."),
+	CHATROOM_CREATE_ACCESS_DENIED(
+		HttpStatus.FORBIDDEN, "CHATROOM_CREATE_ACCESS_DENIED", "채팅방 생성에 관한 권한이 없습니다."),
 	CHATROOM_NOT_FOUND(
 		HttpStatus.NOT_FOUND, "CHATROOM_NOT_FOUND", "해당 채팅방을 찾을 수 없습니다."),
+	PRODUCT_SELLER_NOT_FOUND(
+		HttpStatus.NOT_FOUND, "PRODUCT_SELLER_NOT_FOUND", "판매자 정보를 조회할 수 없습니다."),
 	CHATROOM_ALREADY_EXISTS(
 		HttpStatus.CONFLICT, "CHATROOM_ALREADY_EXISTS", "해당 상품에 대한 상담방이 이미 존재합니다."),
 	CHATROOM_ALREADY_CLOSED(
-		HttpStatus.CONFLICT, "CHATROOM_ALREADY_CLOSED", "이미 종료된 채팅방입니다.");
+		HttpStatus.CONFLICT, "CHATROOM_ALREADY_CLOSED", "이미 종료된 채팅방입니다."),
+	PRODUCT_NOT_AVAILABLE_FOR_CHAT(
+		HttpStatus.CONFLICT, "PRODCUT_NOT_AVAILABLE_FOR_CHAT", "판매중인 상품만 상담방을 생성할 수 있습니다.");
 
 	private final HttpStatus status;
 	private final String code;
