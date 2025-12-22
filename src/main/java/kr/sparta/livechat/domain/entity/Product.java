@@ -102,4 +102,14 @@ public class Product extends BaseTimeEntity {
 			this.status = status;
 		}
 	}
+
+	/**
+	 * 상품을 삭제(Soft Delete) 처리합니다.
+	 * <p>
+	 * 실제로 DB에서 삭제하지 않고 상품 상태를 DELETE로 변경합니다.
+	 * 인증/인가 및 소유자 검증은 서비스 레이어에서 처리합니다.
+	 */
+	public void delete() {
+		this.status = ProductStatus.DELETED;
+	}
 }

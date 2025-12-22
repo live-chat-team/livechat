@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import kr.sparta.livechat.domain.entity.Product;
@@ -212,7 +213,8 @@ public class ProductServiceTest {
 			products,
 			PageRequest.of(page, size, Sort.by("createdAt").descending()), 2);
 
-		given(productRepository.findAll(any(PageRequest.class))).willReturn(pageResult);
+		given(productRepository.findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class)))
+			.willReturn(pageResult);
 
 		//when
 		GetProductListResponse res = productService.getProductList(page, size);
@@ -231,7 +233,7 @@ public class ProductServiceTest {
 		assertThat(first.getName()).isEqualTo("상품1");
 		assertThat(first.getPrice()).isEqualTo(1000);
 
-		verify(productRepository).findAll(any(PageRequest.class));
+		verify(productRepository).findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class));
 	}
 
 	/**
@@ -272,7 +274,8 @@ public class ProductServiceTest {
 			0
 		);
 
-		given(productRepository.findAll(any(PageRequest.class))).willReturn(emptyPage);
+		given(productRepository.findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class)))
+			.willReturn(emptyPage);
 
 		//when
 		GetProductListResponse res = productService.getProductList(page, size);
@@ -284,7 +287,7 @@ public class ProductServiceTest {
 		assertThat(res.getProductList().size()).isEqualTo(0);
 		assertThat(res.isHasNext()).isFalse();
 
-		verify(productRepository).findAll(any(PageRequest.class));
+		verify(productRepository).findAllByStatusNot(eq(ProductStatus.DELETED), any(Pageable.class));
 	}
 
 	/**
@@ -310,7 +313,8 @@ public class ProductServiceTest {
 		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
 		given(product.getCreatedAt()).willReturn(createdAt);
 
-		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+		given(productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED))
+			.willReturn(Optional.of(product));
 
 		//when
 		GetProductDetailResponse res = productService.getProductDetail(productId);
@@ -325,7 +329,7 @@ public class ProductServiceTest {
 		assertThat(res.getStatus()).isEqualTo(ProductStatus.ONSALE);
 		assertThat(res.getCreatedAt()).isEqualTo(createdAt);
 
-		verify(productRepository).findById(productId);
+		verify(productRepository).findByIdAndStatusNot(productId, ProductStatus.DELETED);
 	}
 
 	/**
@@ -356,7 +360,8 @@ public class ProductServiceTest {
 	void FailCaseGetProductDetail_ProductNotFound() {
 		//given
 		Long productId = 999L;
-		given(productRepository.findById(productId)).willReturn(Optional.empty());
+		given(productRepository.findByIdAndStatusNot(productId, ProductStatus.DELETED))
+			.willReturn(Optional.empty());
 
 		//when
 		Throwable thrown = catchThrowable(() -> productService.getProductDetail(productId));
@@ -366,7 +371,7 @@ public class ProductServiceTest {
 		CustomException ce = (CustomException)thrown;
 		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
 
-		verify(productRepository).findById(productId);
+		verify(productRepository).findByIdAndStatusNot(productId, ProductStatus.DELETED);
 	}
 
 	/**
@@ -529,4 +534,98 @@ public class ProductServiceTest {
 		verify(userRepository).findById(sellerId);
 		verify(productRepository).findById(productId);
 	}
+
+	/**
+	 * 상품 삭제(Soft Delete) 성공 케이스를 검증합니다.
+	 * 판매자 조회 성공 -> SELLER 권한 검증 -> 상품 조회 성공 -> 소유자 검증 -> 상태 DELETED 변경
+	 */
+	@Test
+	@DisplayName("상품 삭제 성공 - Soft Delete 처리")
+	void SuccessCaseDeleteProduct() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getId()).willReturn(sellerId);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		User productSeller = mock(User.class);
+		given(productSeller.getId()).willReturn(sellerId);
+
+		Product product = mock(Product.class);
+		given(product.getSeller()).willReturn(productSeller);
+		given(product.getStatus()).willReturn(ProductStatus.ONSALE);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		// when
+		productService.deleteProduct(productId, sellerId);
+
+		// then
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+		verify(product).delete();
+	}
+
+	/**
+	 * 상품 삭제 실패 - 이미 삭제된 상품 요청 시 PRODUCT_ALREADY_DELETED 반환 여부를 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 이미 삭제된 상품")
+	void FailCaseDeleteProduct_AlreadyDeleted() {
+		// given
+		Long productId = 1L;
+		Long sellerId = 1L;
+
+		User currentUser = mock(User.class);
+		given(currentUser.getRole()).willReturn(Role.SELLER);
+
+		Product product = mock(Product.class);
+		given(product.getStatus()).willReturn(ProductStatus.DELETED);
+
+		given(userRepository.findById(sellerId)).willReturn(Optional.of(currentUser));
+		given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.deleteProduct(productId, sellerId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ALREADY_DELETED);
+
+		verify(userRepository).findById(sellerId);
+		verify(productRepository).findById(productId);
+		verify(product, never()).delete();
+	}
+
+	/**
+	 * 상품 삭제 실패 - 판매자 권한이 아닐 시 PRODUCT_ACCESS_DENIED 반환 여부를 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 삭제 실패 - 판매자 권한 없음")
+	void FailCaseDeleteProduct_NotSellerRole() {
+		// given
+		Long productId = 1L;
+		Long userId = 1L;
+
+		User buyer = mock(User.class);
+		given(buyer.getRole()).willReturn(Role.BUYER);
+
+		given(userRepository.findById(userId)).willReturn(Optional.of(buyer));
+
+		// when
+		Throwable thrown = catchThrowable(() -> productService.deleteProduct(productId, userId));
+
+		// then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_ACCESS_DENIED);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(productRepository);
+	}
+
 }
