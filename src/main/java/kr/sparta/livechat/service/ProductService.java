@@ -119,7 +119,9 @@ public class ProductService {
 
 		Page<Product> pageResult = productRepository.findAllByStatusNot(ProductStatus.DELETED, pageable);
 
-		List<ProductListItem> productList = pageResult.getContent().stream().map(ProductListItem::new).toList();
+		List<ProductListItem> productList = pageResult.getContent().stream()
+			.map(ProductListItem::from)
+			.toList();
 
 		return new GetProductListResponse(pageResult.getNumber(), pageResult.getSize(), pageResult.getTotalElements(),
 			pageResult.getTotalPages(), pageResult.hasNext(), productList);
