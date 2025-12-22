@@ -55,9 +55,6 @@ public class PatchProductResponse {
 	}
 
 	public static PatchProductResponse from(Product product) {
-		if (product == null) {
-			return null;
-		}
 
 		Long sellerId;
 
