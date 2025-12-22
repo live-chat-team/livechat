@@ -12,6 +12,5 @@ package kr.sparta.livechat.domain.role;
  */
 public enum MessageType {
 	TEXT,
-	IMAGE,
-	FILES
+	IMAGE
 }
