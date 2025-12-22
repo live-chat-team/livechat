@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.transaction.Transactional;
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
@@ -170,20 +171,7 @@ public class ProductService {
 			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
 		}
 
-		if (request == null || (request.getName() == null && request.getPrice() == null
-			&& request.getDescription() == null && request.getStatus() == null)) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
-		if (request.getName() != null && request.getName().isBlank()) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
-		if (request.getPrice() != null && request.getPrice() < 0) {
-			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
-		}
-
-		if (request.getDescription() != null && request.getDescription().isBlank()) {
+		if (request == null || request.isEmpty()) {
 			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
 		}
 
