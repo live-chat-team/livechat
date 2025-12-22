@@ -8,11 +8,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.dto.product.PatchProductRequest;
+import kr.sparta.livechat.dto.product.PatchProductResponse;
 import kr.sparta.livechat.dto.product.ProductListItem;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
@@ -107,5 +110,52 @@ public class ProductService {
 			.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
 		return GetProductDetailResponse.from(product);
+	}
+
+	/**
+	 * 상품 정보를 부분 수정(PATCH)합니다.
+	 * <p>
+	 * 판매자 권한 및 상품 소유자 검증 후, 요청에 포함된 필드만 수정합니다.
+	 * </p>
+	 *
+	 * @param productId     수정할 상품 식별자
+	 * @param request       부분 수정 요청 DTO (모든 필드 nullable)
+	 * @param currentUserId 요청 사용자(판매자) 식별자
+	 * @return 수정된 상품 정보 응답 DTO
+	 * @throws CustomException 400(입력값/빈 바디), 403(권한/소유자 불일치), 404(상품 없음)
+	 */
+	@Transactional
+	public PatchProductResponse patchProduct(Long productId, PatchProductRequest request, Long currentUserId) {
+
+		if (productId == null || productId <= 0) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+
+		User currentUser = userRepository.findById(currentUserId)
+			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
+
+		if (currentUser.getRole() != Role.SELLER) {
+			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
+		}
+
+		if (request == null || request.isEmpty()) {
+			throw new CustomException(ErrorCode.PRODUCT_INVALID_INPUT);
+		}
+
+		Product product = productRepository.findById(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+		if (!product.getSeller().getId().equals(currentUser.getId())) {
+			throw new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED);
+		}
+
+		product.patch(
+			request.getName(),
+			request.getPrice(),
+			request.getDescription(),
+			request.getStatus()
+		);
+
+		return PatchProductResponse.from(product);
 	}
 }

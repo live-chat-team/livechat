@@ -78,4 +78,28 @@ public class Product extends BaseTimeEntity {
 			.status(ProductStatus.ONSALE)
 			.build();
 	}
+
+	/**
+	 * 상품 정보를 부분 수정(PATCH) 합니다.
+	 * 전달된 파라미터 중 null 이 아닌 값만 기존 상품 정보에 반영하며, null인 값은 기존 값을 유지합니다.
+	 *
+	 * @param name        수정할 상품명 (선택)
+	 * @param price       수정할 상품 가격 (선택)
+	 * @param description 수정할 상품 설명 (선택)
+	 * @param status      수정할 상품의 상태 (선택)
+	 */
+	public void patch(String name, Integer price, String description, ProductStatus status) {
+		if (name != null) {
+			this.name = name;
+		}
+		if (price != null) {
+			this.price = price;
+		}
+		if (description != null) {
+			this.description = description;
+		}
+		if (status != null) {
+			this.status = status;
+		}
+	}
 }

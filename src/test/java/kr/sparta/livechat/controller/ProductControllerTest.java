@@ -4,29 +4,40 @@ import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import kr.sparta.livechat.config.SecurityConfig;
+import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.dto.product.PatchProductResponse;
+import kr.sparta.livechat.entity.Role;
+import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
-import kr.sparta.livechat.global.exception.GlobalExceptionHandler;
+import kr.sparta.livechat.repository.UserRepository;
+import kr.sparta.livechat.security.CustomUserDetails;
+import kr.sparta.livechat.service.AuthService;
+import kr.sparta.livechat.service.JwtService;
 import kr.sparta.livechat.service.ProductService;
 
 /**
@@ -37,12 +48,11 @@ import kr.sparta.livechat.service.ProductService;
  * </p>
  *
  * @author 재원
- * @version 1.0
+ * @version 1.1
  * @since 2025. 12. 16.
  */
 @WebMvcTest(controllers = ProductController.class)
-@Import(GlobalExceptionHandler.class)
-@AutoConfigureMockMvc(addFilters = false)
+@Import(SecurityConfig.class)
 @TestPropertySource(properties = "server.port=0")
 public class ProductControllerTest {
 
@@ -54,8 +64,39 @@ public class ProductControllerTest {
 
 	@MockitoBean
 	private ProductService productService;
-	@Autowired
-	private GlobalExceptionHandler globalExceptionHandler;
+
+	@MockitoBean
+	private JwtService jwtService;
+
+	@MockitoBean
+	private AuthService authService;
+
+	@MockitoBean
+	private UserRepository userRepository;
+
+	private void loginAs(Long userId, Role role) {
+		User user = mock(User.class);
+		given(user.getId()).willReturn(userId);
+		given(user.getEmail()).willReturn("test@test.com");
+		given(user.getPassword()).willReturn("pw");
+		given(user.getRole()).willReturn(role);
+
+		CustomUserDetails userDetails = new CustomUserDetails(user);
+
+		UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+			userDetails, null, userDetails.getAuthorities()
+		);
+		SecurityContextHolder.getContext().setAuthentication(auth);
+	}
+
+	private void loginAsSeller(Long userId) {
+		loginAs(userId, Role.SELLER);
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		SecurityContextHolder.clearContext();
+	}
 
 	/**
 	 * 상품 등록 성공 케이스를 검증합니다.
@@ -265,5 +306,151 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.timestamp").exists());
 
 		then(productService).should(times(1)).getProductDetail(productId);
+	}
+
+	/**
+	 * 상품 수정 성공 케이스를 검증합니다.
+	 * <p>
+	 * 인증된 SELLER 사용자가 정상 요청 바디로 PATCH 요청을 수행하면 200(OK)로 처리되는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("상품 수정 성공 - 인증된 SELLER는 200 OK 및 JSON 응답 반환")
+	void patchProduct_Success_AuthenticatedSeller() throws Exception {
+		// given
+		loginAsSeller(1L);
+		Long productId = 1L;
+
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "수정된 토르의 망치");
+		body.put("price", 3100000);
+		body.put("description", "수정된 설명");
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		// when & then
+		PatchProductResponse response = PatchProductResponse.builder()
+			.productId(1L)
+			.name("수정된 토르의 망치")
+			.price(3100000)
+			.description("수정된 설명")
+			.sellerId(1L)
+			.status(ProductStatus.SOLDOUT)
+			.createdAt(LocalDateTime.parse("2025-12-09T14:06:47"))
+			.updatedAt(LocalDateTime.parse("2025-12-10T01:20:30"))
+			.build();
+
+		given(productService.patchProduct(anyLong(), any(), anyLong())).willReturn(response);
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.productId").value(1))
+			.andExpect(jsonPath("$.name").value("수정된 토르의 망치"))
+			.andExpect(jsonPath("$.price").value(3100000))
+			.andExpect(jsonPath("$.description").value("수정된 설명"))
+			.andExpect(jsonPath("$.sellerId").value(1))
+			.andExpect(jsonPath("$.status").value("SOLDOUT"))
+			.andExpect(jsonPath("$.createdAt").exists())
+			.andExpect(jsonPath("$.updatedAt").exists());
+
+		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
+	}
+
+	/**
+	 * 상품 수정 실패 케이스 - 빈 바디 요청 시 케이스를 검증합니다.
+	 * <p>
+	 * 인증된 SELLER 사용자가 아무런 내용도 수정하지 않고 PATCH 요청을 수행하면 400으로 처리되는지 확인합니다.
+	 * </p>
+	 *
+	 * @throws Exception CustomException 예외처리
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 빈 바디 요청이면 400 Bad Request")
+	void patchProduct_Fail_EmptyBody() throws Exception {
+		// given
+		loginAsSeller(1L);
+		Long productId = 1L;
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_INVALID_INPUT.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_INVALID_INPUT.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		verifyNoInteractions(productService);
+	}
+
+	/**
+	 * 상품 수정 실패 케이스 - 판매자 권한 없음(403)을 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 판매자 권한 없을 경우 403 에러 반환 ")
+	void patchProduct_Fail_AccessDenied() throws Exception {
+		// given
+		loginAs(1L, Role.BUYER);
+		Long productId = 1L;
+
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "수정된 토르의 망치");
+		body.put("price", 3100000);
+		body.put("description", "수정된 설명");
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		given(productService.patchProduct(anyLong(), any(), anyLong()))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_ACCESS_DENIED));
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isForbidden())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(403))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_ACCESS_DENIED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_ACCESS_DENIED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
+	}
+
+	/**
+	 * 상품 수정 실패 케이스 - 수정 대상 상품 없음(404)을 검증합니다.
+	 */
+	@Test
+	@DisplayName("상품 수정 실패 - 상품을 찾을 수 없으면 404 에러 반환")
+	void patchProduct_Fail_ProductNotFound() throws Exception {
+		// given
+		loginAsSeller(1L);
+		Long productId = 999L;
+
+		Map<String, Object> body = new HashMap<>();
+		body.put("name", "수정된 토르의 망치");
+		body.put("price", 3100000);
+		body.put("description", "수정된 설명");
+		String requestJson = objectMapper.writeValueAsString(body);
+
+		given(productService.patchProduct(anyLong(), any(), anyLong()))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+		// when & then
+		mockMvc.perform(patch("/api/products/{productId}", productId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(404))
+			.andExpect(jsonPath("$.code").value(ErrorCode.PRODUCT_NOT_FOUND.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_NOT_FOUND.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(productService).should(times(1)).patchProduct(anyLong(), any(), anyLong());
 	}
 }

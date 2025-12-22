@@ -2,7 +2,9 @@ package kr.sparta.livechat.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +17,9 @@ import kr.sparta.livechat.dto.product.CreateProductRequest;
 import kr.sparta.livechat.dto.product.CreateProductResponse;
 import kr.sparta.livechat.dto.product.GetProductDetailResponse;
 import kr.sparta.livechat.dto.product.GetProductListResponse;
+import kr.sparta.livechat.dto.product.PatchProductRequest;
+import kr.sparta.livechat.dto.product.PatchProductResponse;
+import kr.sparta.livechat.security.CustomUserDetails;
 import kr.sparta.livechat.service.ProductService;
 import lombok.RequiredArgsConstructor;
 
@@ -82,6 +87,29 @@ public class ProductController {
 		@PathVariable Long productId
 	) {
 		GetProductDetailResponse response = productService.getProductDetail(productId);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 상품 정보를 부분 수정합니다.
+	 * <p>
+	 * JWT 인증을 통해 인증된 사용자 정보를 기반으로 상품 수정을 처리합니다.
+	 * </p>
+	 *
+	 * @param productId   수정할 상품 식별자
+	 * @param request     상품 수정 요청 데이터(부분 수정)
+	 * @param userDetails 인증된 사용자 정보
+	 * @return 수정된 상품 정보 응답
+	 */
+	@PatchMapping("/{productId}")
+	public ResponseEntity<PatchProductResponse> patchProduct(
+		@PathVariable Long productId,
+		@RequestBody PatchProductRequest request,
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		PatchProductResponse response =
+			productService.patchProduct(productId, request, userDetails.getUserId());
+
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }
