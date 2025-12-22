@@ -74,7 +74,17 @@ public enum ErrorCode {
 	CHATROOM_ALREADY_CLOSED(
 		HttpStatus.CONFLICT, "CHATROOM_ALREADY_CLOSED", "이미 종료된 채팅방입니다."),
 	PRODUCT_NOT_AVAILABLE_FOR_CHAT(
-		HttpStatus.CONFLICT, "PRODCUT_NOT_AVAILABLE_FOR_CHAT", "판매중인 상품만 상담방을 생성할 수 있습니다.");
+		HttpStatus.CONFLICT, "PRODCUT_NOT_AVAILABLE_FOR_CHAT", "판매중인 상품만 상담방을 생성할 수 있습니다."),
+
+	// 프로필 이미지 수정에서 사용할 에러코드
+	PROFILE_INVALID_FORMAT(
+		HttpStatus.BAD_REQUEST, "PROFILE_INVALID_FORMAT", "이미지 파일만 업로드 가능합니다.(jpg, jpeg, png, gif)"),
+	PROFILE_SIZE_EXCEEDED(
+		HttpStatus.BAD_REQUEST, "PROFILE_SIZE_EXCEEDED", "파일 크기는 5MB를 초과할 수 없습니다."),
+	PROFILE_INVALID_DATA(
+		HttpStatus.BAD_REQUEST, "PROFILE_INVALID_DATA", "프로필 수정 요청 데이터가 유효하지 않습니다."),
+	PROFILE_UPDATE_FORBIDDEN(
+		HttpStatus.FORBIDDEN, "PROFILE_UPDATE_FORBIDDEN", "본인의 프로필만 수정할 수 있습니다.");
 
 	private final HttpStatus status;
 	private final String code;
