@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "chat_rooms_summary")
+@Table(name = "chat_rooms_summaries")
 public class ChatRoomSummary {
 
 	@Id
