@@ -26,25 +26,22 @@ public class ChatMessageListItem {
 	private final String content;
 	private final MessageType messageType;
 	private final LocalDateTime sentAt;
-	private final Long readCount;
 
-	private ChatMessageListItem(Message message, long readCount) {
+	private ChatMessageListItem(Message message) {
 		this.messageId = message.getId();
 		this.writerId = message.getWriter().getId();
 		this.content = message.getContent();
 		this.messageType = message.getType();
 		this.sentAt = message.getSentAt();
-		this.readCount = readCount;
 	}
 
 	/**
 	 * 엔티티를 메시지 목록 조회용 DTO로 변환합니다.
 	 *
-	 * @param message   변환할 메시지 엔티티
-	 * @param readCount 해당 메시지의 읽음 수
+	 * @param message 변환할 메시지 엔티티
 	 * @return 메시지 목록 조회에서 사용할 단일 메시지 정보
 	 */
-	public static ChatMessageListItem from(Message message, long readCount) {
-		return new ChatMessageListItem(message, readCount);
+	public static ChatMessageListItem from(Message message) {
+		return new ChatMessageListItem(message);
 	}
 }
