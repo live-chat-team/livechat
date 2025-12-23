@@ -42,6 +42,8 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
 	private static final Pattern ROOM_SUBSCRIBE_PATTERN =
 		Pattern.compile("^/sub/chat/room/(?<roomId>\\d+)$");
+	private static final Pattern ROOM_SYSTEM_SUBSCRIBE_PATTERN =
+		Pattern.compile("^/sub/chat/room/(?<roomId>\\d+)/system$");
 
 	private final SocketService socketService;
 	private final JwtService jwtService;
@@ -76,12 +78,20 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 				return message;
 			}
 
-			Matcher matcher = ROOM_SUBSCRIBE_PATTERN.matcher(destination);
-			if (!matcher.matches()) {
+			Matcher roomMatcher = ROOM_SUBSCRIBE_PATTERN.matcher(destination);
+			Matcher systemMatcher = ROOM_SYSTEM_SUBSCRIBE_PATTERN.matcher(destination);
+
+			// /sub/chat/room/{roomId} 또는 /sub/chat/room/{roomId}/system 만 허용
+			if (!roomMatcher.matches() && !systemMatcher.matches()) {
 				return message;
 			}
 
-			Long roomId = Long.parseLong(matcher.group("roomId"));
+			Long roomId;
+			if (roomMatcher.matches()) {
+				roomId = Long.parseLong(roomMatcher.group("roomId"));
+			} else {
+				roomId = Long.parseLong(systemMatcher.group("roomId"));
+			}
 
 			if (!(accessor.getUser() instanceof CustomPrincipal principal)) {
 				throw new CustomException(ErrorCode.AUTH_INVALID_TOKEN_FORMAT);
