@@ -57,6 +57,7 @@ public class SecurityConfig {
 				.requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
 				.requestMatchers("/api/auth/logout").authenticated()
 				.requestMatchers("/api/admin/**").authenticated()
+				.requestMatchers("/ws/**").permitAll()
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(
