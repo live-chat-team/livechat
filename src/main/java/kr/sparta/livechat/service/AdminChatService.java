@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,12 +13,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kr.sparta.livechat.domain.entity.ChatRoom;
+import kr.sparta.livechat.domain.entity.Message;
 import kr.sparta.livechat.domain.role.RoleInRoom;
+import kr.sparta.livechat.dto.admin.AdminChatDetailResponse;
+import kr.sparta.livechat.dto.admin.AdminChatMessageResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomListResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomResponse;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ChatRoomRepository;
+import kr.sparta.livechat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -33,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminChatService {
 	private final ChatRoomRepository chatRoomRepository;
+	private final MessageRepository messageRepository;
 
 	/**
 	 * 모든 채팅방 목록 조회
@@ -100,5 +106,65 @@ public class AdminChatService {
 			chatRooms.hasNext(),
 			dtoList
 		);
+	}
+
+	/**
+	 * 특정 채팅방의 메시지 내역을 상세 조회합니다)
+	 * Slice를 사용하여 무한 스크롤 방식에 최적화
+	 *
+	 * @param chatRoomId 조회할 채팅방 ID
+	 * @param page 페이지 번호
+	 * @param size 페이지당 메시지 개수
+	 */
+
+	/**
+	 * 특정 채팅방의 메시지 내역을 상세 조회합니다
+	 * Slice 방식을 사용하며, 최신 메시지가 먼저 오도록 설정합니다.
+	 *
+	 * @param chatRoomId 조회할 채팅방의 고유 식별자 ID
+	 * @param page 조회할 페이지 번호
+	 * @param size 페이지당 메시지 개수
+	 * @return 채팅방 상태 정보와 메시지 slice 포함한 AdminChatDetailResponse
+	 */
+	@Transactional(readOnly = true)
+	public AdminChatDetailResponse getChatRoomDetail(Long chatRoomId, int page, int size) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !authentication.isAuthenticated() ||
+			authentication.getPrincipal().equals("anonymousUser")) {
+			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+		}
+
+		boolean isAdmin = authentication.getAuthorities().stream()
+			.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+		if (!isAdmin) {
+			throw new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED);
+		}
+
+		ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+			.orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
+
+		org.springframework.data.domain.Pageable pageable =
+			PageRequest.of(page, size, Sort.by("sentAt").descending());
+		Slice<Message> messageSlice = messageRepository.findByRoomId(chatRoomId, pageable);
+
+		List<AdminChatMessageResponse> messageDtos = messageSlice.getContent().stream()
+			.map(msg -> AdminChatMessageResponse.builder()
+				.messageId(msg.getId())
+				.content(msg.getContent())
+				.type(msg.getType().name())
+				.writerId(msg.getWriter().getId())
+				.writerName(msg.getWriter().getName())
+				.sentAt(msg.getSentAt())
+				.build())
+			.toList();
+
+		return AdminChatDetailResponse.builder()
+			.chatRoomId(chatRoom.getId())
+			.chatRoomStatus(chatRoom.getStatus().name())
+			.page(messageSlice.getNumber())
+			.size(messageSlice.getSize())
+			.hasNext(messageSlice.hasNext())
+			.messagesList(messageDtos)
+			.build();
 	}
 }
