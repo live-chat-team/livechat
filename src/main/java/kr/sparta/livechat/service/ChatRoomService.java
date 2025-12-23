@@ -285,6 +285,9 @@ public class ChatRoomService {
 		if (chatRoomId == null || chatRoomId <= 0) {
 			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
 		}
+		if (request == null) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
+		}
 	}
 
 	private ChatRoom findChatRoomOrThrow(Long chatRoomId) {
