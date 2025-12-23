@@ -57,7 +57,7 @@ public class S3Service {
 
 		validateFile(file);
 
-		String beforeImageURL = user.getProfileImage();
+		String beforeImageUrl = user.getProfileImage();
 
 		String originalFilename = file.getOriginalFilename();
 		String extension = getFileExtension(originalFilename);
@@ -73,17 +73,17 @@ public class S3Service {
 			s3Client.putObject(putObjectRequest,
 				RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-			String profileImageURL = String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region,
+			String profileImageUrl = String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region,
 				newFileName);
 
-			user.updateProfileImage(profileImageURL);
+			user.updateProfileImage(profileImageUrl);
 			userRepository.save(user);
 
-			if (user.getProfileImage().equals(profileImageURL)) {
-				deleteImage(beforeImageURL);
+			if (user.getProfileImage().equals(profileImageUrl)) {
+				deleteImage(beforeImageUrl);
 			}
 
-			return new UserUploadProfileResponse(user.getId(), user.getName(), profileImageURL);
+			return new UserUploadProfileResponse(user.getId(), user.getName(), profileImageUrl);
 		} catch (IOException ex) {
 			throw new CustomException(ErrorCode.COMMON_INTERNAL_ERROR);
 		}
