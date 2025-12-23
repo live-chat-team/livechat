@@ -6,7 +6,7 @@ body:
     attributes:
       label: 📄 설명
       description: 리팩터링이 필요한 이유와 개선 방향을 작성해 주세요.
-      placeholder: 자세히 적을 수록 좋습니!
+      placeholder: 자세히 적을 수록 좋습니다!
     validations:
       required: true
   - type: textarea
