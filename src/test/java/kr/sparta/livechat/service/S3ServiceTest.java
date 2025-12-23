@@ -19,6 +19,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import kr.sparta.livechat.dto.UserUploadProfileResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.UserRepository;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -62,7 +64,7 @@ class S3ServiceTest {
 
 	@Test
 	@DisplayName("프로필 이미지 수정/업로드 성공")
-	void uploadImage_Success() {
+	void SuccessCaseUploadProfileImage() {
 		//given
 		given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
@@ -83,4 +85,48 @@ class S3ServiceTest {
 		verify(userRepository).save(user);
 		verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
 	}
+
+	@Test
+	@DisplayName("프로필 수정 실패 - 사용자 조회 실패 시 404")
+	void FailCaseUploadProfileImage_UserNotFound() {
+		//given
+		given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+		//when
+		Throwable thrown = catchThrowable(() -> s3Service.uploadImage(userId, validFile));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.AUTH_USER_NOT_FOUND);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(s3Client);
+	}
+
+	@Test
+	@DisplayName("프로필 수정 실패 - 잘못된 이미지 파일 형식 업로드 시 400")
+	void FailCaseUploadProfileImage_InvalidFileFormat() {
+		//given
+		MockMultipartFile invalidFile = new MockMultipartFile(
+			"file",
+			"invalidTest.txt",
+			"text/plain",
+			"text content".getBytes()
+		);
+
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+		//when
+		Throwable thrown = catchThrowable(() -> s3Service.uploadImage(userId, invalidFile));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PROFILE_INVALID_FORMAT);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(s3Client);
+	}
+	
 }
