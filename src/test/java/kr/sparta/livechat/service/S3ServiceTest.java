@@ -128,4 +128,68 @@ class S3ServiceTest {
 		verify(userRepository).findById(userId);
 		verifyNoInteractions(s3Client);
 	}
+
+	@Test
+	@DisplayName("프로필 수정 실패 - 빈 파일 또는 null 업로드 시 400")
+	void failCaseUploadProfileImage_InvalidFileData() {
+		//given
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+		//when
+		Throwable thrown = catchThrowable(() -> s3Service.uploadImage(userId, null));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PROFILE_INVALID_DATA);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(s3Client);
+	}
+
+	@Test
+	@DisplayName("프로필 수정 실패 - 파일 크기 5MB 초과 시 400")
+	void failCaseUploadProfileImage_SizeExceeded() {
+		//given
+		MockMultipartFile largeFile = new MockMultipartFile(
+			"file",
+			"largeImage.jpg",
+			"image/jpeg",
+			new byte[6 * 1024 * 1024]
+		);
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+		//when
+		Throwable thrown = catchThrowable(() -> s3Service.uploadImage(userId, largeFile));
+
+		//then
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.PROFILE_SIZE_EXCEEDED);
+
+		verify(userRepository).findById(userId);
+		verifyNoInteractions(s3Client);
+	}
+
+	@Test
+	@DisplayName("프로필 이미지 업로드 성공 - 기본 프로필 이미지 업로드 시 S3 삭제 처리되지 않음")
+	void successCaseUploadProfileImage_S3ClientError() {
+		//given
+		user.updateProfileImage("default_profile_image.jpg");
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+		//when
+		UserUploadProfileResponse response = s3Service.uploadImage(userId, validFile);
+
+		//then
+		assertThat(response).isNotNull();
+		assertThat(response.getUserId()).isEqualTo(userId);
+		assertThat(response.getName()).isEqualTo(user.getName());
+		assertThat(response.getProfileImageUrl()).isNotEqualTo("default_profile_image.jpg");
+
+		verify(userRepository).findById(userId);
+		verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+		verify(userRepository).save(user);
+		verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+	}
 }
