@@ -2,6 +2,8 @@ package kr.sparta.livechat.service;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +16,7 @@ import kr.sparta.livechat.domain.role.MessageType;
 import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.domain.role.RoleInRoom;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.socket.RoomClosedEventResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -43,6 +46,7 @@ public class ChatRoomService {
 	private final ProductRepository productRepository;
 	private final UserRepository userRepository;
 	private final SocketService socketService;
+	private final SimpMessagingTemplate messagingTemplate;
 
 	/**
 	 * 상품에 대한 상담 채팅방을 생성합니다.
@@ -134,5 +138,48 @@ public class ChatRoomService {
 			throw new CustomException(ErrorCode.PRODUCT_SELLER_NOT_FOUND);
 		}
 		return seller;
+	}
+
+	/**
+	 * 채팅방 상태를 변경합니다.
+	 * <p>
+	 * status가 CLOSED로 변경되는 경우 채팅방을 종료하고
+	 * 해당 방의 모든 참여자에게 ROOM_CLOSED 시스템 이벤트를 브로드캐스트합니다.
+	 * </p>
+	 *
+	 * @param roomId        채팅방 ID
+	 * @param status        변경할 상태 (CLOSED만 유효)
+	 * @param currentUserId 상태 변경을 요청한 사용자 ID
+	 */
+	@Transactional
+	public void updateChatRoomStatus(Long roomId, ChatRoomStatus status, Long currentUserId) {
+		ChatRoom room = chatRoomRepository.findById(roomId)
+			.orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
+
+		if (!socketService.isParticipant(roomId, currentUserId)) {
+			throw new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED);
+		}
+
+		if (room.getStatus() == ChatRoomStatus.CLOSED) {
+			throw new CustomException(ErrorCode.CHATROOM_ALREADY_CLOSED);
+		}
+
+		if (status != ChatRoomStatus.CLOSED) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_STATUS);
+		}
+
+		room.close();
+		chatRoomRepository.save(room);
+
+		RoomClosedEventResponse event = RoomClosedEventResponse.builder()
+			.event("ROOM_CLOSED")
+			.roomId(roomId)
+			.closedBy(currentUserId)
+			.reason("TRADE_DONE")
+			.closedAt(room.getClosedAt())
+			.build();
+
+		String destination = "/sub/chat/room/" + roomId + "/system";
+		messagingTemplate.convertAndSend(destination, event);
 	}
 }
