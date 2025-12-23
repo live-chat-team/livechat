@@ -3,10 +3,12 @@ package kr.sparta.livechat.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import kr.sparta.livechat.dto.admin.AdminChatDetailResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomListResponse;
 import kr.sparta.livechat.service.AdminChatService;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +43,24 @@ public class AdminChatController {
 		@RequestParam(value = "size", defaultValue = "20") int size) {
 
 		return ResponseEntity.ok(adminChatService.getAllChatRooms(page, size));
+	}
+
+	/**
+	 *  특정 채팅방의 메시지 송수신 내역을 상세 조회한다.
+	 *  대량의 메시지 데이터를 slice 방식의 페이징을 사용한다
+	 *
+	 * @param chatRoomId 상세 조회할 채팅방의 고유 식별자
+	 * @param page 조회할 페이지 번호
+	 * @param size 페이지당 출력할 메시지 개수
+	 * @return 채팅방 상태와 메시지 목록을 포함한 응답 엔티티
+	 */
+	@GetMapping("/chat-rooms/{chatRoomId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<AdminChatDetailResponse> getAdminChatDetail(
+		@PathVariable Long chatRoomId,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "50") int size) {
+
+		return ResponseEntity.ok(adminChatService.getChatRoomDetail(chatRoomId, page, size));
 	}
 }
