@@ -42,7 +42,9 @@ public class AdminChatController {
 		@RequestParam(value = "page", defaultValue = "0") int page,
 		@RequestParam(value = "size", defaultValue = "20") int size) {
 
-		return ResponseEntity.ok(adminChatService.getAllChatRooms(page, size));
+		AdminChatRoomListResponse response = adminChatService.getAllChatRooms(page, size);
+
+		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 
 	/**
@@ -61,6 +63,8 @@ public class AdminChatController {
 		@RequestParam(defaultValue = "0") int page,
 		@RequestParam(defaultValue = "50") int size) {
 
-		return ResponseEntity.ok(adminChatService.getChatRoomDetail(chatRoomId, page, size));
+		AdminChatDetailResponse response = adminChatService.getChatRoomDetail(chatRoomId, page, size);
+
+		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }
