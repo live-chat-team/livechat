@@ -1,6 +1,7 @@
 package kr.sparta.livechat.controller;
 
 import kr.sparta.livechat.dto.socket.MessageSendRequest;
+import kr.sparta.livechat.dto.socket.ReadMessageRequest;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.service.ChatMessageService;
@@ -39,6 +40,24 @@ public class ChatMessageController {
 
 		Long writerId = customPrincipal.getUserId();
 		chatMessageService.sendMessage(writerId, request);
+	}
+
+	/**
+	 * 전송한 STOMP 메시지를 수신하고 메시지 읽음 처리를 수행합니다.
+	 *
+	 * 인증된 사용자만 읽음 처리를 할 수 있고
+	 * 인증 정보는 {@link Principal} 형태로 전달됩니다.
+	 *
+	 * 읽음 처리 성공 시 해당 채팅방의 모든 참여자에게 READ 이벤트를 브로드캐스트합니다.
+	 */
+	@MessageMapping("/chat/read")
+	public void read(ReadMessageRequest request, Principal principal) {
+		if (!(principal instanceof CustomPrincipal customPrincipal)) {
+			throw new CustomException(ErrorCode.AUTH_INVALID_TOKEN_FORMAT);
+		}
+
+		Long readerId = customPrincipal.getUserId();
+		chatMessageService.readMessage(readerId, request);
 	}
 }
 

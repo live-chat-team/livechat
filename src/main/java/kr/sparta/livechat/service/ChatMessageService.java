@@ -1,16 +1,24 @@
 package kr.sparta.livechat.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import kr.sparta.livechat.domain.entity.ChatRoom;
 import kr.sparta.livechat.domain.entity.Message;
+import kr.sparta.livechat.domain.entity.MessageRead;
 import kr.sparta.livechat.domain.role.MessageType;
+
 import kr.sparta.livechat.dto.socket.ChatEventResponse;
 import kr.sparta.livechat.dto.socket.MessageResponse;
 import kr.sparta.livechat.dto.socket.MessageSendRequest;
+import kr.sparta.livechat.dto.socket.ReadEventResponse;
+import kr.sparta.livechat.dto.socket.ReadMessageRequest;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.WsCustomException;
 import kr.sparta.livechat.global.exception.WsErrorCode;
 
 import kr.sparta.livechat.repository.ChatRoomRepository;
+import kr.sparta.livechat.repository.MessageReadRepository;
 import kr.sparta.livechat.repository.MessageRepository;
 import kr.sparta.livechat.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +45,7 @@ public class ChatMessageService {
 	private final ChatRoomRepository chatRoomRepository;
 	private final UserRepository userRepository;
 	private final MessageRepository messageRepository;
+	private final MessageReadRepository messageReadRepository;
 
 	private final SimpMessagingTemplate messagingTemplate;
 
@@ -93,6 +102,64 @@ public class ChatMessageService {
 				.event("MESSAGE")
 				.message(response)
 				.build()
+		);
+	}
+
+	/**
+	 * 메시지 읽음 처리를 수행하고 READ 이벤트를 브로드캐스트합니다.
+	 *
+	 * 사용자가 읽은 마지막 메시지 ID를 받아 검증하고
+	 * 해당 채팅방의 모든 참여자에게 READ 이벤트를 브로드캐스트합니다.
+	 *
+	 * 읽음 처리된 메세지는 DB에 저장합니다.
+	 *
+	 * CHAT_ROOM_NOT_FOUND: 채팅방이 존재하지 않음
+	 * FORBIDDEN: 채팅방 참여자가 아님
+	 * NVALID_MESSAGE: lastReadMessageId가 해당 채팅방의 메시지가 아님
+	 */
+	public void readMessage(Long readerId, ReadMessageRequest request) {
+		Long roomId = request.getRoomId();
+		Long lastReadMessageId = request.getLastReadMessageId();
+
+		ChatRoom room = chatRoomRepository.findById(roomId)
+			.orElseThrow(() -> new WsCustomException(WsErrorCode.CHAT_ROOM_NOT_FOUND));
+
+		if (!socketService.isParticipant(roomId, readerId)) {
+			throw new WsCustomException(WsErrorCode.FORBIDDEN);
+		}
+
+		if (!messageRepository.existsById(lastReadMessageId)) {
+			throw new WsCustomException(WsErrorCode.CHAT_ROOM_NOT_FOUND);
+		}
+
+		if (!messageRepository.existsByIdAndRoomId(lastReadMessageId, roomId)) {
+			throw new WsCustomException(WsErrorCode.INVALID_MESSAGE);
+		}
+
+		User reader = userRepository.findById(readerId)
+			.orElseThrow(() -> new WsCustomException(WsErrorCode.AUTH_FAILED));
+
+		List<Message> messagesToMarkRead =
+			messageRepository.findByRoom_IdAndIdLessThanEqualOrderByIdAsc(roomId, lastReadMessageId);
+
+		for (Message message : messagesToMarkRead) {
+			if (!messageReadRepository.existsByMessageIdAndUserId(message.getId(), readerId)) {
+				MessageRead read = MessageRead.of(message, reader);
+				messageReadRepository.save(read);
+			}
+		}
+
+		ReadEventResponse eventResponse = ReadEventResponse.builder()
+			.event("READ")
+			.roomId(roomId)
+			.readerId(readerId)
+			.lastReadMessageId(lastReadMessageId)
+			.readAt(LocalDateTime.now())
+			.build();
+
+		messagingTemplate.convertAndSend(
+			"/sub/chat/room/" + roomId,
+			eventResponse
 		);
 	}
 }
