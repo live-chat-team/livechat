@@ -64,7 +64,7 @@ class S3ServiceTest {
 
 	@Test
 	@DisplayName("프로필 이미지 수정/업로드 성공")
-	void SuccessCaseUploadProfileImage() {
+	void successCaseUploadProfileImage() {
 		//given
 		given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
@@ -88,7 +88,7 @@ class S3ServiceTest {
 
 	@Test
 	@DisplayName("프로필 수정 실패 - 사용자 조회 실패 시 404")
-	void FailCaseUploadProfileImage_UserNotFound() {
+	void failCaseUploadProfileImage_UserNotFound() {
 		//given
 		given(userRepository.findById(userId)).willReturn(Optional.empty());
 
@@ -106,7 +106,7 @@ class S3ServiceTest {
 
 	@Test
 	@DisplayName("프로필 수정 실패 - 잘못된 이미지 파일 형식 업로드 시 400")
-	void FailCaseUploadProfileImage_InvalidFileFormat() {
+	void failCaseUploadProfileImage_InvalidFileFormat() {
 		//given
 		MockMultipartFile invalidFile = new MockMultipartFile(
 			"file",
@@ -128,5 +128,4 @@ class S3ServiceTest {
 		verify(userRepository).findById(userId);
 		verifyNoInteractions(s3Client);
 	}
-	
 }
