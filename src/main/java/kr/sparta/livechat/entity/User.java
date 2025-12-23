@@ -81,5 +81,5 @@ public class User {
 	public void updateProfileImage(String profileImageUrl) {
 		this.profileImage = profileImageUrl;
 	}
-	
+
 }
