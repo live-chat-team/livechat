@@ -27,6 +27,16 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+/**
+ * S3ServiceTest 테스트 클래스입니다.
+ * <p>
+ *     대상 클래스: {@link S3Service}
+ *     AWS S3를 활용해 프로필 이미지 수정 기능을 검증합니다.
+ *     파일 형식, 크기 및 S3에 이미지 업로드/삭제 로직을 테스트합니다.
+ * </p>
+ * @author 변채주
+ * @since 2025. 12. 23.
+ */
 @ExtendWith(MockitoExtension.class)
 class S3ServiceTest {
 	Pattern uuidPattern = Pattern.compile(
@@ -62,6 +72,13 @@ class S3ServiceTest {
 			"testContent".getBytes());
 	}
 
+	/**
+	 * 프로필 이미지 업로드 성공 케이스를 검증합니다.
+	 * <p>
+	 *     요청 사용자 정보 조회 → 파일 검증 통과 → S3 업로드 → 새 URL을 DB에 반영(저장) → 응답 반환
+	 *     S3 URL 형태와 UUID 형식 준수 여부를 검증합니다.
+	 * </p>
+	 */
 	@Test
 	@DisplayName("프로필 이미지 수정/업로드 성공")
 	void successCaseUploadProfileImage() {
@@ -86,6 +103,12 @@ class S3ServiceTest {
 		verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
 	}
 
+	/**
+	 * 존재하지 않는 사용자로 프로필 이미지 업로드 시도 시 실패하는 케이스를 검증합니다.
+	 * <p>
+	 * 요청 사용자 조회 실패 -> AUTH_USER_NOT_FOUND 예외 발생 -> S3 호출 없음
+	 * </p>
+	 */
 	@Test
 	@DisplayName("프로필 수정 실패 - 사용자 조회 실패 시 404")
 	void failCaseUploadProfileImage_UserNotFound() {
@@ -104,6 +127,12 @@ class S3ServiceTest {
 		verifyNoInteractions(s3Client);
 	}
 
+	/**
+	 * 허용되지 않은 파일 형식(txt, exe 등) 업로드 시 실패하는 케이스를 검증합니다.
+	 * <p>
+	 * 요청 사용자 조회 성공 -> 파일 형식 검증 실패 -> PROFILE_INVALID_FORMAT 예외 발생 -> S3 호출 없음
+	 * </p>
+	 */
 	@Test
 	@DisplayName("프로필 수정 실패 - 잘못된 이미지 파일 형식 업로드 시 400")
 	void failCaseUploadProfileImage_InvalidFileFormat() {
@@ -129,6 +158,12 @@ class S3ServiceTest {
 		verifyNoInteractions(s3Client);
 	}
 
+	/**
+	 * null 또는 빈 파일 업로드 시 실패하는 케이스를 검증합니다.
+	 * <p>
+	 * 요청 사용자 조회 성공 -> 파일 존재 여부 검증 실패 -> PROFILE_INVALID_DATA 예외 발생 -> S3 호출 없음
+	 * </p>
+	 */
 	@Test
 	@DisplayName("프로필 수정 실패 - 빈 파일 또는 null 업로드 시 400")
 	void failCaseUploadProfileImage_InvalidFileData() {
@@ -147,6 +182,12 @@ class S3ServiceTest {
 		verifyNoInteractions(s3Client);
 	}
 
+	/**
+	 * 5MB를 초과하는 파일 업로드 시 실패하는 케이스를 검증합니다.
+	 * <p>
+	 * 요청 사용자 조회 성공 -> 파일 크기 검증 실패 -> PROFILE_SIZE_EXCEEDED 예외 발생 -> S3 호출 없음
+	 * </p>
+	 */
 	@Test
 	@DisplayName("프로필 수정 실패 - 파일 크기 5MB 초과 시 400")
 	void failCaseUploadProfileImage_SizeExceeded() {
@@ -171,6 +212,12 @@ class S3ServiceTest {
 		verifyNoInteractions(s3Client);
 	}
 
+	/**
+	 * 기본 프로필 이미지를 사용 중인 사용자가 이미지 업로드 시 기존 이미지 삭제가 발생하지 않는 케이스를 검증합니다.
+	 * <p>
+	 * 요청 사용자 조회 성공 -> 기본 이미지 확인 -> S3 업로드 -> 기존 이미지 삭제 안 함 -> DB 저장 -> 응답 반환
+	 * </p>
+	 */
 	@Test
 	@DisplayName("프로필 이미지 업로드 성공 - 기본 프로필 이미지 업로드 시 S3 삭제 처리되지 않음")
 	void successCaseUploadProfileImage_S3ClientError() {
