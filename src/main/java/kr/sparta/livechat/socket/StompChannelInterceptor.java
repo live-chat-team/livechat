@@ -54,9 +54,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
 			token = token.replace("Bearer ", "");
 
-			if (!jwtService.validateToken(token)) {
-				throw new CustomException(ErrorCode.AUTH_INVALID_TOKEN_FORMAT);
-			}
+			jwtService.validateToken(token);
 
 			Long userId = jwtService.getUserIdFromToken(token);
 			accessor.setUser(new CustomPrincipal(userId));
