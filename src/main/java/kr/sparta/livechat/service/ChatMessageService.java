@@ -2,6 +2,7 @@ package kr.sparta.livechat.service;
 
 import kr.sparta.livechat.domain.entity.ChatRoom;
 import kr.sparta.livechat.domain.entity.Message;
+import kr.sparta.livechat.domain.role.ChatRoomStatus;
 import kr.sparta.livechat.domain.role.MessageType;
 import kr.sparta.livechat.dto.socket.ChatEventResponse;
 import kr.sparta.livechat.dto.socket.MessageResponse;
@@ -45,6 +46,10 @@ public class ChatMessageService {
 
 		ChatRoom room = chatRoomRepository.findById(roomId)
 			.orElseThrow(() -> new WsCustomException(WsErrorCode.CHAT_ROOM_NOT_FOUND));
+
+		if (room.getStatus() == ChatRoomStatus.CLOSED) {
+			throw new WsCustomException(WsErrorCode.FORBIDDEN);
+		}
 
 		if (!socketService.isParticipant(roomId, writerId)) {
 			throw new WsCustomException(WsErrorCode.FORBIDDEN);
