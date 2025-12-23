@@ -19,7 +19,16 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-
+/**
+ * 채팅 메시지 전송 및 브로드캐스트 로직을 담당하는 서비스 클래스입니다.
+ *
+ * 클라이언트가 {@code /pub/chat/message}로 전송한 메시지를 검증한 뒤
+ * DB에 저장하고 {@code /sub/chat/room/{roomId}} 구독자들에게
+ * 메세지 이벤트를 브로드캐스트합니다.
+ *
+ * @author 오정빈
+ * @since 2025. 12. 22.
+ */
 @Service
 @RequiredArgsConstructor
 public class ChatMessageService {
@@ -33,12 +42,11 @@ public class ChatMessageService {
 	private final SimpMessagingTemplate messagingTemplate;
 
 	/**
-	 * 메시지 전송 유스케이스
-	 * - roomId 유효성 검증(4004)
-	 * - 참여자 여부 검증(4002)
-	 * - type/content 형식 오류(4003)
-	 * - Message 엔티티 생성 및 저장
-	 * - /sub/chat/room/{roomId} 로 MESSAGE 이벤트 브로드캐스트
+	 * 채팅 메시지를 전송하고 구독자들에게 브로드캐스트합니다.
+	 *
+	 * {@code 4002}: 전송자가 해당 채팅방 참여자가 아님
+	 * {@code 4003}: 형식 오류
+	 * {@code 4004}: {@code roomId}에 해당하는 채팅방이 존재하지 않음
 	 */
 	public void sendMessage(Long writerId, MessageSendRequest request) {
 
