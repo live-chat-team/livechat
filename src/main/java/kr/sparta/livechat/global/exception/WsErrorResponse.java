@@ -25,6 +25,10 @@ public class WsErrorResponse {
 	private final String event;
 	private final WsErrorBody message;
 
+	/**
+	 * 실제 에러 정보를 표현하는 객체입니다.
+	 * {@link WsErrorCode}를 기반으으로 표준화된 {@link WsErrorResponse} 객체를 생성합니다.
+	 */
 	@Getter
 	@Builder
 	@AllArgsConstructor
