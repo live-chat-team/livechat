@@ -109,15 +109,6 @@ public class AdminChatService {
 	}
 
 	/**
-	 * 특정 채팅방의 메시지 내역을 상세 조회합니다)
-	 * Slice를 사용하여 무한 스크롤 방식에 최적화
-	 *
-	 * @param chatRoomId 조회할 채팅방 ID
-	 * @param page 페이지 번호
-	 * @param size 페이지당 메시지 개수
-	 */
-
-	/**
 	 * 특정 채팅방의 메시지 내역을 상세 조회합니다
 	 * Slice 방식을 사용하며, 최신 메시지가 먼저 오도록 설정합니다.
 	 *
