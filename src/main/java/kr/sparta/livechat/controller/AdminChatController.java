@@ -1,15 +1,20 @@
 package kr.sparta.livechat.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import kr.sparta.livechat.dto.admin.AdminChatDetailResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomListResponse;
+import kr.sparta.livechat.dto.admin.AdminChatStatusRequest;
+import kr.sparta.livechat.dto.admin.AdminChatStatusResponse;
 import kr.sparta.livechat.service.AdminChatService;
 import lombok.RequiredArgsConstructor;
 
@@ -64,6 +69,23 @@ public class AdminChatController {
 		@RequestParam(defaultValue = "50") int size) {
 
 		AdminChatDetailResponse response = adminChatService.getChatRoomDetail(chatRoomId, page, size);
+
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 관리자가 채팅방 상태를 CLOSED로 변환한다.
+	 * @param chatRoomId 상태를 변경할 채팅방 ID
+	 * @param request 변경할 상태 정보
+	 * @return 상태 변경이 완료된 채팅방의 정보
+	 */
+	@PatchMapping("/chat-rooms/{chatRoomId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<AdminChatStatusResponse> updateChatRoomStatus(
+		@PathVariable Long chatRoomId,
+		@RequestBody AdminChatStatusRequest request) {
+
+		AdminChatStatusResponse response = adminChatService.updateChatRoomStatus(chatRoomId, request);
 
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
