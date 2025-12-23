@@ -69,7 +69,7 @@ public class AdminChatService {
 		}
 
 		Pageable pageable = PageRequest.of(page, size,
-			Sort.by(Sort.Order.asc("status"), Sort.Order.desc("createdAt")));
+			Sort.by(Sort.Order.desc("status"), Sort.Order.desc("createdAt")));
 
 		Page<ChatRoom> chatRooms = chatRoomRepository.findAll(pageable);
 		List<AdminChatRoomResponse> dtoList = chatRooms.getContent().stream()
