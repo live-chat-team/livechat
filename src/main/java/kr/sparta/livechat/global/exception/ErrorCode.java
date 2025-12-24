@@ -35,6 +35,10 @@ public enum ErrorCode {
 		HttpStatus.BAD_REQUEST, "AUTH_TOKEN_UNSUPPORTED", "지원되지 않는 JWT 토큰입니다."),
 	AUTH_DUPLICATE_EMAIL(
 		HttpStatus.CONFLICT, "AUTH_DUPLICATE_EMAIL", "이미 사용 중인 이메일 주소입니다."),
+	AUTH_INVALID_EMAIL_FORMAT(
+		HttpStatus.BAD_REQUEST, "AUTH_INVALID_EMAIL_FORMAT", "이메일 형식이 올바르지 않습니다."),
+	AUTH_INVALID_PASSWORD_FORMAT(
+		HttpStatus.BAD_REQUEST, "AUTH_INVALID_PASSWORD_FORMAT", "비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다."),
 	AUTH_FORBIDDEN_ROLE(
 		HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN_ROLE", "ADMIN 역할은 일반 회원가입을 통해 등록할 수 없습니다."),
 	AUTH_USER_NOT_FOUND(
@@ -43,6 +47,10 @@ public enum ErrorCode {
 		HttpStatus.UNAUTHORIZED, "AUTH_MISMATCH", "이메일 또는 비밀번호가 일치하지 않습니다."),
 	AUTH_TOKEN_BLACKLISTED(
 		HttpStatus.FORBIDDEN, "AUTH_TOKEN_BLACKLISTED", "이미 로그아웃 처리된 토큰입니다."),
+	AUTH_EMAIL_REQUIRED(
+		HttpStatus.BAD_REQUEST, "AUTH_EMAIL_REQUIRED", "이메일은 필수 입력 항목입니다."),
+	AUTH_PASSWORD_REQUIRED(
+		HttpStatus.BAD_REQUEST, "AUTH_PASSWORD_REQUIRED", "비밀번호는 필수 입력 항목입니다."),
 
 	// 상품 관리에서 사용할 에러코드
 	PRODUCT_INVALID_INPUT(
@@ -59,14 +67,24 @@ public enum ErrorCode {
 	// 채팅방 관리에서 사용할 에러코드
 	CHATROOM_INVALID_STATUS(
 		HttpStatus.BAD_REQUEST, "CHATROOM_INVALD_STATUS", "요청한 채팅방 상태값이 유효하지 않습니다."),
+	CHATROOM_INVALID_INPUT(
+		HttpStatus.BAD_REQUEST, "CHATROOM_INVALD_INPUT", "요청한 채팅방 입력값이 유효하지 않습니다."),
+	CONTENT_MUST_NOT_BLANK(
+		HttpStatus.BAD_REQUEST, "CONTENT_MUST_NOT_BLANK", "상담 메시지를 입력해주세요."),
 	CHATROOM_ACCESS_DENIED(
 		HttpStatus.FORBIDDEN, "CHATROOM_ACCESS_DENIED", "채팅방에 대한 권한이 없습니다."),
+	CHATROOM_CREATE_ACCESS_DENIED(
+		HttpStatus.FORBIDDEN, "CHATROOM_CREATE_ACCESS_DENIED", "채팅방 생성에 관한 권한이 없습니다."),
 	CHATROOM_NOT_FOUND(
 		HttpStatus.NOT_FOUND, "CHATROOM_NOT_FOUND", "해당 채팅방을 찾을 수 없습니다."),
+	PRODUCT_SELLER_NOT_FOUND(
+		HttpStatus.NOT_FOUND, "PRODUCT_SELLER_NOT_FOUND", "판매자 정보를 조회할 수 없습니다."),
 	CHATROOM_ALREADY_EXISTS(
 		HttpStatus.CONFLICT, "CHATROOM_ALREADY_EXISTS", "해당 상품에 대한 상담방이 이미 존재합니다."),
 	CHATROOM_ALREADY_CLOSED(
-		HttpStatus.CONFLICT, "CHATROOM_ALREADY_CLOSED", "이미 종료된 채팅방입니다.");
+		HttpStatus.CONFLICT, "CHATROOM_ALREADY_CLOSED", "이미 종료된 채팅방입니다."),
+	PRODUCT_NOT_AVAILABLE_FOR_CHAT(
+		HttpStatus.CONFLICT, "PRODCUT_NOT_AVAILABLE_FOR_CHAT", "판매중인 상품만 상담방을 생성할 수 있습니다.");
 
 	private final HttpStatus status;
 	private final String code;

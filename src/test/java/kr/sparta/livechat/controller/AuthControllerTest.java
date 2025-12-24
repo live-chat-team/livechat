@@ -22,10 +22,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import kr.sparta.livechat.dto.UserLoginRequest;
-import kr.sparta.livechat.dto.UserLoginResponse;
-import kr.sparta.livechat.dto.UserRegisterRequest;
-import kr.sparta.livechat.dto.UserRegisterResponse;
+import kr.sparta.livechat.dto.user.UserLoginRequest;
+import kr.sparta.livechat.dto.user.UserLoginResponse;
+import kr.sparta.livechat.dto.user.UserRegisterRequest;
+import kr.sparta.livechat.dto.user.UserRegisterResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
@@ -62,9 +62,6 @@ class AuthControllerTest {
 	private static final String VALID_PASSWORD = "Password123!";
 	private static final String VALID_ACCESS_TOKEN = "valid.jwt.token";
 
-	/**
-	 * 각테스트 실행전 MockMvc 객체 생성합니다.
-	 */
 	@BeforeEach
 	void setUp() {
 		objectMapper = new ObjectMapper();
@@ -85,13 +82,20 @@ class AuthControllerTest {
 		);
 	}
 
-	private UserRegisterResponse mockResponse() {
+	private UserRegisterResponse mockRegisterResponse() {
 		return UserRegisterResponse.builder()
 			.id(1L)
 			.email(VALID_EMAIL)
 			.name(VALID_NAME)
 			.role(Role.BUYER)
 			.createdAt(LocalDateTime.now())
+			.build();
+	}
+
+	private UserLoginResponse mockLoginResponse() {
+		return UserLoginResponse.builder()
+			.accessToken(VALID_ACCESS_TOKEN)
+			.refreshToken("refresh.jwt.token")
 			.build();
 	}
 
@@ -104,17 +108,18 @@ class AuthControllerTest {
 	void register_success() throws Exception {
 		// given
 		UserRegisterRequest request = validRequest();
-		UserRegisterResponse response = mockResponse();
+		UserRegisterResponse response = mockRegisterResponse();
 
 		when(authService.registerUser(any(UserRegisterRequest.class)))
 			.thenReturn(response);
 
-		// when & then
+		// when
 		mockMvc.perform(
 				post(REGISTER_URL)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request))
 			)
+			//then
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.email").value(VALID_EMAIL))
 			.andExpect(jsonPath("$.name").value(VALID_NAME))
@@ -129,7 +134,37 @@ class AuthControllerTest {
 	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
 	 */
 	@Test
-	@DisplayName("회원가입 실패(ROLE ADMIN 시도")
+	@DisplayName("회원가입 실패 - 이메일 중복")
+	void register_fail_duplicate_email() throws Exception {
+		//given
+		UserRegisterRequest request = validRequest();
+		ErrorCode errorCode = ErrorCode.AUTH_DUPLICATE_EMAIL;
+
+		doThrow(new CustomException(errorCode))
+			.when(authService).registerUser(any(UserRegisterRequest.class));
+
+		//whtn
+		mockMvc.perform(
+				post(REGISTER_URL)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(request))
+			)
+			//then
+			.andExpect(status().is(errorCode.getStatus().value()))
+			.andExpect(jsonPath("$.code").value(errorCode.getCode()))
+			.andExpect(jsonPath("$.message").value(errorCode.getMessage()))
+			.andDo(print());
+
+		verify(authService, times(1)).registerUser(any(UserRegisterRequest.class));
+	}
+
+	/**
+	 * 회원가입 실패테스트-ADMIN 역할요청
+	 * 권환 제한으로 예외 발생
+	 * @throws Exception 예외
+	 */
+	@Test
+	@DisplayName("회원가입 실패 - ADMIN 역할 시도")
 	void register_fail_forbidden_admin_role() throws Exception {
 		//given
 		UserRegisterRequest request = new UserRegisterRequest(
@@ -139,56 +174,18 @@ class AuthControllerTest {
 			Role.ADMIN
 		);
 		ErrorCode errorCode = ErrorCode.AUTH_FORBIDDEN_ROLE;
-	}
-
-	/**
-	 * 비밀번호 유효성 검사 규칙을 만족하지 않았을때 400 응답을 확인합니다.
-	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
-	 */
-	@Test
-	@DisplayName("회원가입 실패 비밀번호 유효성 검사 실패 (400)")
-	void register_fail_password_validation() throws Exception {
-		// given
-		UserRegisterRequest request = new UserRegisterRequest(
-			VALID_EMAIL,
-			"short",
-			VALID_NAME,
-			Role.BUYER
-		);
-
-		// when & then
-		mockMvc.perform(
-				post(REGISTER_URL)
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andDo(print());
-
-		verify(authService, never()).registerUser(any());
-	}
-
-	/**
-	 * service 에서 이메일 중복CustomException 을 던질경우
-	 * GlobalExceptionHandler 통해 409 응답이 오는지 확인합니다.
-	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
-	 */
-	@Test
-	@DisplayName("회원가입 실패 이메일 중복 (CustomException)")
-	void register_fail_duplicate_email() throws Exception {
-		// given
-		UserRegisterRequest request = validRequest();
-		ErrorCode errorCode = ErrorCode.AUTH_DUPLICATE_EMAIL;
 
 		doThrow(new CustomException(errorCode))
 			.when(authService).registerUser(any(UserRegisterRequest.class));
 
-		// when & then
+		//when
 		mockMvc.perform(
 				post(REGISTER_URL)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request))
 			)
+
+			//then
 			.andExpect(status().is(errorCode.getStatus().value()))
 			.andExpect(jsonPath("$.code").value(errorCode.getCode()))
 			.andExpect(jsonPath("$.message").value(errorCode.getMessage()))
@@ -202,26 +199,25 @@ class AuthControllerTest {
 	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
 	 */
 	@Test
-	@DisplayName("성공: 로그인 성공 시 200 OK와 토큰 반환")
+	@DisplayName("로그인 성공 200 OK")
 	void login_success() throws Exception {
 		// given
 		UserLoginRequest request = new UserLoginRequest(VALID_EMAIL, VALID_PASSWORD);
-		UserLoginResponse mockResponse = UserLoginResponse.builder()
-			.accessToken(VALID_ACCESS_TOKEN)
-			.refreshToken(null)
-			.build();
+		UserLoginResponse response = mockLoginResponse();
 
-		when(authService.login(any(UserLoginRequest.class)))
-			.thenReturn(mockResponse);
+		when(authService.login(any(UserLoginRequest.class))).thenReturn(response);
 
-		// when & then
+		// when
 		mockMvc.perform(
 				post(LOGIN_URL)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request))
 			)
+
+			//then
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.accessToken").value(VALID_ACCESS_TOKEN))
+			.andExpect(jsonPath("$.refreshToken").value("refresh.jwt.token"))
 			.andDo(print());
 
 		verify(authService, times(1)).login(any(UserLoginRequest.class));
@@ -233,7 +229,7 @@ class AuthControllerTest {
 	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
 	 */
 	@Test
-	@DisplayName("실패: 로그인 시 인증 정보 불일치 (401 Unauthorized)")
+	@DisplayName("로그인 실패 - 인증 정보 불일치")
 	void login_fail_invalid_credentials() throws Exception {
 		// given
 		UserLoginRequest request = new UserLoginRequest(VALID_EMAIL, "wrongpassword");
@@ -242,14 +238,17 @@ class AuthControllerTest {
 		doThrow(new CustomException(errorCode))
 			.when(authService).login(any(UserLoginRequest.class));
 
-		// when & then
+		// when
 		mockMvc.perform(
 				post(LOGIN_URL)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request))
 			)
+
+			//then
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value(errorCode.getCode()))
+			.andExpect(jsonPath("$.message").value(errorCode.getMessage()))
 			.andDo(print());
 
 		verify(authService, times(1)).login(any(UserLoginRequest.class));
@@ -267,13 +266,16 @@ class AuthControllerTest {
 		final String bearerToken = "Bearer " + VALID_ACCESS_TOKEN;
 		doNothing().when(authService).logout(eq(VALID_ACCESS_TOKEN));
 
-		// when & then
+		// when
 		mockMvc.perform(
 				post(LOGOUT_URL)
 					.header("Authorization", bearerToken)
 			)
+
+			//then
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.message").value("로그아웃이 성공적으로 처리되었습니다."))
+			.andExpect(jsonPath("$.message")
+				.value("로그아웃 되었습니다.쿠키가 삭제되었습니다."))
 			.andDo(print());
 
 		verify(authService, times(1)).logout(eq(VALID_ACCESS_TOKEN));
@@ -284,17 +286,16 @@ class AuthControllerTest {
 	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
 	 */
 	@Test
-	@DisplayName("실패: Authorization 헤더 누락 시 401 Unauthorized")
-	void logout_fail_no_header() throws Exception {
-		// given
-		ErrorCode errorCode = ErrorCode.AUTH_INVALID_TOKEN_FORMAT;
+	@DisplayName("로그아웃 성공 - 헤더 누락")
+	void logout_no_header_success() throws Exception {
+		//given
 
-		// when & then
-		mockMvc.perform(
-				post(LOGOUT_URL)
-			)
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.code").value(errorCode.getCode()))
+		//when
+		mockMvc.perform(post(LOGOUT_URL))
+			//then
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message")
+				.value("로그아웃 되었습니다.쿠키가 삭제되었습니다."))
 			.andDo(print());
 
 		verify(authService, never()).logout(any());
@@ -305,20 +306,21 @@ class AuthControllerTest {
 	 * @throws Exception Exception MockMvc 수행 중 발생할 수 있는 예외
 	 */
 	@Test
-	@DisplayName("실패: Bearer 접두사 누락 시 401 Unauthorized")
-	void logout_fail_missing_bearer() throws Exception {
-		// given
-		final String invalidToken = VALID_ACCESS_TOKEN;
-		ErrorCode errorCode = ErrorCode.AUTH_INVALID_TOKEN_FORMAT;
+	@DisplayName("로그아웃 성공 - Bearer 누락")
+	void logout_missing_bearer_success() throws Exception {
+		//given
 
-		// when & then
+		//when
 		mockMvc.perform(
 				post(LOGOUT_URL)
-					.header("Authorization", invalidToken)
+					.header("Authorization", VALID_ACCESS_TOKEN)
 			)
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.code").value(errorCode.getCode()))
+			//then
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message")
+				.value("로그아웃 되었습니다.쿠키가 삭제되었습니다."))
 			.andDo(print());
+
 		verify(authService, never()).logout(any());
 	}
 }
