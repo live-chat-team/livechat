@@ -15,7 +15,20 @@ import kr.sparta.livechat.domain.entity.Message;
  * @version 1.0
  * @since 2025. 12. 19.
  */
+@Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
+	/**
+	 * 특정 채팅방의 속한 메세지 목록을 Slice 형태로 조회합니다.
+	 *
+	 * @param roomId 조회하고자 하는 채팅방 고유 식별자ID
+	 * @param pageable 페이징 및 정렬 정보를 담은 객체
+	 * @return 메시지 목록과 다음 페이지 존재 여부를 포함하는 객체
+	 * @author kimsehyun
+	 *  @since 2025. 12. 22.
+	 */
+	Slice<Message> findByRoomId(Long roomId, Pageable pageable);
+
+	long countByRoom_Id(Long roomId);
 
 	/**
 	 * 특정 메시지가 특정 채팅방에 속하는지 확인합니다.
