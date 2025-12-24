@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,10 +25,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.sparta.livechat.config.SecurityConfig;
+import kr.sparta.livechat.domain.role.RoleInRoom;
 import kr.sparta.livechat.dto.chatroom.ChatRoomListItem;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
+import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
+import kr.sparta.livechat.dto.chatroom.ProductInfo;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -320,5 +325,150 @@ public class ChatRoomControllerTest {
 
 		then(chatRoomService).should(times(1))
 			.getChatRoomList(eq(buyerId), eq(page), eq(size));
+	}
+
+	/**
+	 * 채팅방 상세 조회 성공 케이스를 검증합니다.
+	 * <p>
+	 * 인증된 사용자가 특정 채팅방 상세 조회 요청을 수행하면 200(OK) 상태와 함께
+	 * 서비스가 반환한 응답 DTO가 JSON으로 직렬화되어 내려오는지 확인합니다.
+	 * </p>
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 성공 - 200 응답과 목록 반환")
+	void getChatRoomDetail_Success() throws Exception {
+		// given
+		Long chatRoomId = 1L;
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		GetChatRoomDetailResponse response = mock(GetChatRoomDetailResponse.class);
+		given(response.getChatRoomId()).willReturn(chatRoomId);
+		given(response.getStatus()).willReturn(OPEN);
+		given(response.getOpenedAt()).willReturn(LocalDateTime.parse("2025-12-10T09:00:00"));
+		given(response.getClosedAt()).willReturn(null);
+
+		ProductInfo productInfo = mock(ProductInfo.class);
+		given(productInfo.getProductId()).willReturn(1L);
+		given(productInfo.getProductName()).willReturn("토르의 망치");
+		given(response.getProductInfo()).willReturn(productInfo);
+
+		ParticipantsListItem buyerItem = mock(ParticipantsListItem.class);
+		given(buyerItem.getUserId()).willReturn(buyerId);
+		given(buyerItem.getUserName()).willReturn("홍길동");
+		given(buyerItem.getRoleInRoom()).willReturn(RoleInRoom.BUYER);
+
+		ParticipantsListItem sellerItem = mock(ParticipantsListItem.class);
+		given(sellerItem.getUserId()).willReturn(20L);
+		given(sellerItem.getUserName()).willReturn("김토르");
+		given(sellerItem.getRoleInRoom()).willReturn(RoleInRoom.SELLER);
+
+		given(response.getParticipantsList()).willReturn(List.of(buyerItem, sellerItem));
+
+		given(chatRoomService.getChatRoomDetail(eq(chatRoomId), eq(buyerId))).willReturn(response);
+
+		// when & then
+		mockMvc.perform(get("/api/chat-rooms/{chatRoomId}", chatRoomId))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.chatRoomId").value(1))
+			.andExpect(jsonPath("$.status").value("OPEN"))
+			.andExpect(jsonPath("$.openedAt").exists())
+			.andExpect(jsonPath("$.closedAt").value(Matchers.nullValue()))
+			.andExpect(jsonPath("$.productInfo.productId").value(1))
+			.andExpect(jsonPath("$.productInfo.productName").value("토르의 망치"))
+			.andExpect(jsonPath("$.participantsList").isArray())
+			.andExpect(jsonPath("$.participantsList.length()").value(2))
+			.andExpect(jsonPath("$.participantsList[0].userId").exists())
+			.andExpect(jsonPath("$.participantsList[0].userName").exists())
+			.andExpect(jsonPath("$.participantsList[0].roleInRoom").exists());
+
+		then(chatRoomService).should(times(1)).getChatRoomDetail(eq(chatRoomId), eq(buyerId));
+	}
+
+	/**
+	 * 채팅방 상세 조회 실패(요청 식별자 유효성 오류) 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 실패 - 요청 식별자가 올바르지 않은 경우")
+	void getChatRoomDetail_Fail_InvalidInput() throws Exception {
+		// given
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		Long invalidChatRoomId = 0L;
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_INVALID_INPUT))
+			.given(chatRoomService)
+			.getChatRoomDetail(eq(invalidChatRoomId), eq(buyerId));
+
+		// when & then
+		mockMvc.perform(get("/api/chat-rooms/{chatRoomId}", invalidChatRoomId))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_INVALID_INPUT.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_INVALID_INPUT.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1)).getChatRoomDetail(eq(invalidChatRoomId), eq(buyerId));
+	}
+
+	/**
+	 * 채팅방 상세 조회 실패(권한 없음) 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 실패 - 채팅방 상세조회 권한이 없는 경우")
+	void getChatRoomDetail_Fail_AccessDenied() throws Exception {
+		// given
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		Long chatRoomId = 1L;
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED))
+			.given(chatRoomService)
+			.getChatRoomDetail(eq(chatRoomId), eq(buyerId));
+
+		// when & then
+		mockMvc.perform(get("/api/chat-rooms/{chatRoomId}", chatRoomId))
+			.andExpect(status().isForbidden())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(403))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_ACCESS_DENIED.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_ACCESS_DENIED.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1)).getChatRoomDetail(eq(chatRoomId), eq(buyerId));
+
+	}
+
+	/**
+	 * 채팅방 상세 조회 실패(채팅방 없음) 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상세 조회 실패 - 채팅방 조회를 할 수 없는 경우")
+	void getChatRoomDetail_Fail_NotFoundChatRoom() throws Exception {
+		// given
+		Long buyerId = 10L;
+		loginAsBuyer(buyerId);
+
+		Long chatRoomId = 999L;
+
+		willThrow(new CustomException(ErrorCode.CHATROOM_NOT_FOUND))
+			.given(chatRoomService)
+			.getChatRoomDetail(eq(chatRoomId), eq(buyerId));
+
+		// when & then
+		mockMvc.perform(get("/api/chat-rooms/{chatRoomId}", chatRoomId))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.status").value(404))
+			.andExpect(jsonPath("$.code").value(ErrorCode.CHATROOM_NOT_FOUND.getCode()))
+			.andExpect(jsonPath("$.message").value(ErrorCode.CHATROOM_NOT_FOUND.getMessage()))
+			.andExpect(jsonPath("$.timestamp").exists());
+
+		then(chatRoomService).should(times(1)).getChatRoomDetail(eq(chatRoomId), eq(buyerId));
+
 	}
 }
