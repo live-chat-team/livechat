@@ -25,6 +25,7 @@ import kr.sparta.livechat.domain.entity.ChatRoom;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ChatRoomRepository;
+import kr.sparta.livechat.repository.MessageRepository;
 
 /**
  * 관리자 전용 채팅 서비스에 대한 단위 테스트 클래스
@@ -48,6 +49,9 @@ class AdminChatServiceTest {
 
 	@Mock
 	private SecurityContext securityContext;
+
+	@Mock
+	private MessageRepository messageRepository;
 
 	@AfterEach
 	void clear() {
@@ -92,7 +96,7 @@ class AdminChatServiceTest {
 	}
 
 	/**
-	 * 관리자 권하이 없는 일반 사용자가 조회 했을경우 테스트
+	 * 관리자 권한하이 없는 일반 사용자가 조회 했을경우 테스트
 	 */
 	@Test
 	@DisplayName("관리자 권한이 없는 경우 에러코드 발생")
@@ -119,5 +123,65 @@ class AdminChatServiceTest {
 		assertThatThrownBy(() -> adminChatService.getAllChatRooms(-1, 20))
 			.isInstanceOf(CustomException.class)
 			.hasFieldOrPropertyWithValue("errorCode", ErrorCode.COMMON_BAD_PAGINATION);
+	}
+
+	/**
+	 * 관리자 권한으로 특정 채팅방 상세 조회 성공 테스트
+	 */
+	@Test
+	@DisplayName("상세 조회 성공 - 관리자 권한 및 채팅방 존재 시 Slice 반환")
+	void getChatRoomDetail_Success() {
+		// given
+		mockSecurityContext("ROLE_ADMIN");
+		Long chatRoomId = 1L;
+
+		ChatRoom mockRoom = mock(ChatRoom.class);
+		given(mockRoom.getId()).willReturn(chatRoomId);
+		given(mockRoom.getStatus()).willReturn(kr.sparta.livechat.domain.role.ChatRoomStatus.OPEN);
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(java.util.Optional.of(mockRoom));
+		given(messageRepository.findByRoomId(eq(chatRoomId), any(org.springframework.data.domain.Pageable.class)))
+			.willReturn(new org.springframework.data.domain.SliceImpl<>(List.of()));
+
+		// when
+		var response = adminChatService.getChatRoomDetail(chatRoomId, 0, 50);
+
+		// then
+		assertThat(response.getChatRoomId()).isEqualTo(chatRoomId);
+		verify(messageRepository).findByRoomId(eq(chatRoomId), argThat(p ->
+			p.getSort().getOrderFor("sentAt").isDescending()
+		));
+	}
+
+	/**
+	 * 존재하지 않는 채팅방 ID로 상세 조회 시 예외 발생 테스트
+	 */
+	@Test
+	@DisplayName("상세 조회 실패 - 존재하지 않는 채팅방 ID")
+	void getChatRoomDetail_NotFound() {
+		// given
+		mockSecurityContext("ROLE_ADMIN");
+		Long invalidId = 999L;
+		given(chatRoomRepository.findById(invalidId)).willReturn(java.util.Optional.empty());
+
+		// when & then
+		assertThatThrownBy(() -> adminChatService.getChatRoomDetail(invalidId, 0, 50))
+			.isInstanceOf(CustomException.class)
+			.hasFieldOrPropertyWithValue("errorCode", ErrorCode.CHATROOM_NOT_FOUND);
+	}
+
+	/**
+	 * 관리자 권한이 없을 때 상세 조회가 차단되는지 테스트
+	 */
+	@Test
+	@DisplayName("상세 조회 실패 - 관리자 권한 없음")
+	void getChatRoomDetail_AccessDenied() {
+		// given
+		mockSecurityContext("ROLE_USER");
+
+		// when & then
+		assertThatThrownBy(() -> adminChatService.getChatRoomDetail(1L, 0, 50))
+			.isInstanceOf(CustomException.class)
+			.hasFieldOrPropertyWithValue("errorCode", ErrorCode.CHATROOM_ACCESS_DENIED);
 	}
 }

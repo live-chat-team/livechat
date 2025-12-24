@@ -18,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import kr.sparta.livechat.config.SecurityConfig;
+import kr.sparta.livechat.dto.admin.AdminChatDetailResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomListResponse;
 import kr.sparta.livechat.repository.UserRepository;
 import kr.sparta.livechat.service.AdminChatService;
@@ -103,6 +104,70 @@ class AdminChatControllerTest {
 	@DisplayName("GET /api/admin/chat-rooms - 실패 (비로그인)")
 	void getAdminChatRooms_Unauthorized() throws Exception {
 		mockMvc.perform(get("/api/admin/chat-rooms")
+				.with(csrf()))
+			.andExpect(status().isForbidden());
+	}
+
+	/**
+	 * 관리자 권한을 가진 사용자가 특정 채팅방 조회시 성공 케이스 테스트
+	 * HTTP 200 반환여부
+	 * 응답 바디의 채팅방 ID 및 상태값이 Mock 데이터와 일치하느지 검증
+	 *
+	 * @throws Exception 발생할수 있는 예외
+	 */
+	@Test
+	@DisplayName("GET /api/admin/chat-rooms/{chatRoomId} - 성공 (관리자 권한)")
+	@WithMockUser(roles = "ADMIN")
+	void getAdminChatDetail_Success() throws Exception {
+		// given
+		Long chatRoomId = 1L;
+		AdminChatDetailResponse response = AdminChatDetailResponse.builder()
+			.chatRoomId(chatRoomId)
+			.chatRoomStatus("OPEN")
+			.page(0)
+			.size(50)
+			.hasNext(false)
+			.messagesList(List.of())
+			.build();
+
+		given(adminChatService.getChatRoomDetail(eq(chatRoomId), anyInt(), anyInt())).willReturn(response);
+
+		// when & then
+		mockMvc.perform(get("/api/admin/chat-rooms/{chatRoomId}", chatRoomId)
+				.param("page", "0")
+				.param("size", "50")
+				.with(csrf())
+				.contentType(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.chatRoomId").value(chatRoomId))
+			.andExpect(jsonPath("$.chatRoomStatus").value("OPEN"));
+	}
+
+	/**
+	 * 관리자 권한이 없는 일반 사용자가 조회했을떄 테스트
+	 * HTTP 403 반화 여부
+	 *
+	 * @throws Exception 발생할수 있는 예외
+	 */
+	@Test
+	@DisplayName("GET /api/admin/chat-rooms/{chatRoomId} - 실패 (일반 유저 권한)")
+	@WithMockUser(roles = "USER")
+	void getAdminChatDetail_Forbidden() throws Exception {
+		mockMvc.perform(get("/api/admin/chat-rooms/1")
+				.with(csrf()))
+			.andExpect(status().isForbidden());
+	}
+
+	/**
+	 * 인증 정보가없는 사용자가 조히 했을때 테스트
+	 * HTTP 403 반환 여부
+	 *
+	 * @throws Exception 발생할 수 있는 예외
+	 */
+	@Test
+	@DisplayName("GET /api/admin/chat-rooms/{chatRoomId} - 실패 (비로그인)")
+	void getAdminChatDetail_Unauthorized() throws Exception {
+		mockMvc.perform(get("/api/admin/chat-rooms/1")
 				.with(csrf()))
 			.andExpect(status().isForbidden());
 	}
