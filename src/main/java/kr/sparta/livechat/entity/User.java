@@ -1,10 +1,5 @@
 package kr.sparta.livechat.entity;
 
-import java.time.LocalDateTime;
-
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import kr.sparta.livechat.domain.entity.BaseTimeEntity;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -30,7 +26,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
-public class User {
+public class User extends BaseTimeEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -47,12 +43,6 @@ public class User {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private Role role;
-
-	@CreationTimestamp
-	private LocalDateTime createdAt;
-
-	@UpdateTimestamp
-	private LocalDateTime updatedAt;
 
 	/**
 	 * User 엔티티의 생성자입니다.
