@@ -10,8 +10,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
       SPRING_DATA_REDIS_PORT: 6379
+      GMAIL_ID: ${GMAIL_ID}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
+      - "8080:8080"
     networks:
       - livechat-network
 
