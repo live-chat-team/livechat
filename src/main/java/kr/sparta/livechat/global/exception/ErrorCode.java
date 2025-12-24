@@ -47,6 +47,10 @@ public enum ErrorCode {
 		HttpStatus.UNAUTHORIZED, "AUTH_MISMATCH", "이메일 또는 비밀번호가 일치하지 않습니다."),
 	AUTH_TOKEN_BLACKLISTED(
 		HttpStatus.FORBIDDEN, "AUTH_TOKEN_BLACKLISTED", "이미 로그아웃 처리된 토큰입니다."),
+	AUTH_EMAIL_REQUIRED(
+		HttpStatus.BAD_REQUEST, "AUTH_EMAIL_REQUIRED", "이메일은 필수 입력 항목입니다."),
+	AUTH_PASSWORD_REQUIRED(
+		HttpStatus.BAD_REQUEST, "AUTH_PASSWORD_REQUIRED", "비밀번호는 필수 입력 항목입니다."),
 
 	// 상품 관리에서 사용할 에러코드
 	PRODUCT_INVALID_INPUT(

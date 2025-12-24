@@ -91,8 +91,15 @@ public class AuthService {
 	 */
 	@Transactional
 	public UserLoginResponse login(UserLoginRequest request) {
+		if (request.getEmail() == null || request.getEmail().isBlank()) {
+			throw new CustomException(ErrorCode.AUTH_EMAIL_REQUIRED);
+		}
+
+		if (request.getPassword() == null || request.getPassword().isBlank()) {
+			throw new CustomException(ErrorCode.AUTH_PASSWORD_REQUIRED);
+		}
 		User user = userRepository.findByEmail(request.getEmail())
-			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS));
+			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
 
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
 			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
