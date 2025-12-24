@@ -59,4 +59,14 @@ public class User extends BaseTimeEntity {
 		this.password = password;
 		this.role = role;
 	}
+
+	/**
+	 * 사용자의 비밀번호를 변경합니다.
+	 * 입력값은 이미 암호화(encoding)된 비밀번호여야 합니다.
+	 *
+	 * @param encodedPassword 암호화된 비밀번호
+	 */
+	public void updatePassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
 }
