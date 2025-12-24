@@ -1,4 +1,4 @@
-package kr.sparta.livechat.dto;
+package kr.sparta.livechat.dto.user;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

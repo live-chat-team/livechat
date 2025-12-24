@@ -4,10 +4,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
-import kr.sparta.livechat.dto.UserLoginRequest;
-import kr.sparta.livechat.dto.UserLoginResponse;
-import kr.sparta.livechat.dto.UserRegisterRequest;
-import kr.sparta.livechat.dto.UserRegisterResponse;
+import kr.sparta.livechat.dto.user.UserLoginRequest;
+import kr.sparta.livechat.dto.user.UserLoginResponse;
+import kr.sparta.livechat.dto.user.UserRegisterRequest;
+import kr.sparta.livechat.dto.user.UserRegisterResponse;
+import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
@@ -39,6 +40,9 @@ public class AuthService {
 	/**
 	 * 회원가입을 처리합니다.
 	 * 이메일이 이미 존재할 경우 409 Conflict 예외를 발생시킵니다.
+	 * ADMIN으로 가입시 예외 발생
+	 * 이메일이 양식에 안맞을경우 에외 발생
+	 * 비밀번호가 양식에 안맞을경우 예외 발생
 	 *
 	 * @param request 회원가입 요청 DTO
 	 * @return 회원가입된 사용자 정보를 담은 응답 DTO
@@ -46,8 +50,22 @@ public class AuthService {
 	 */
 	@Transactional
 	public UserRegisterResponse registerUser(UserRegisterRequest request) {
+		if (request.getRole() == Role.ADMIN) {
+			throw new CustomException(ErrorCode.AUTH_FORBIDDEN_ROLE);
+		}
+
 		if (userRepository.existsByEmail(request.getEmail())) {
 			throw new CustomException(ErrorCode.AUTH_DUPLICATE_EMAIL);
+		}
+
+		if (request.getEmail() == null || !request.getEmail().matches
+			("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+			throw new CustomException(ErrorCode.AUTH_INVALID_EMAIL_FORMAT);
+		}
+
+		if (request.getPassword() == null || !request.getPassword().matches
+			("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&]).{8,}$")) {
+			throw new CustomException(ErrorCode.AUTH_INVALID_PASSWORD_FORMAT);
 		}
 
 		User user = User.builder()
