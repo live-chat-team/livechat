@@ -67,6 +67,8 @@ public enum ErrorCode {
 	// 채팅방 관리에서 사용할 에러코드
 	CHATROOM_INVALID_STATUS(
 		HttpStatus.BAD_REQUEST, "CHATROOM_INVALD_STATUS", "요청한 채팅방 상태값이 유효하지 않습니다."),
+	CHATROOM_INVALID_INPUT(
+		HttpStatus.BAD_REQUEST, "CHATROOM_INVALD_INPUT", "요청한 채팅방 입력값이 유효하지 않습니다."),
 	CONTENT_MUST_NOT_BLANK(
 		HttpStatus.BAD_REQUEST, "CONTENT_MUST_NOT_BLANK", "상담 메시지를 입력해주세요."),
 	CHATROOM_ACCESS_DENIED(
