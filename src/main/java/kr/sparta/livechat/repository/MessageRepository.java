@@ -27,4 +27,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 	 */
 	Slice<Message> findByRoomId(Long roomId, Pageable pageable);
 
+	long countByRoom_Id(Long roomId);
+
 }

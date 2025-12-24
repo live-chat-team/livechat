@@ -3,6 +3,7 @@ package kr.sparta.livechat.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,12 +31,15 @@ import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
 import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomRequest;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.ProductInfo;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ChatRoomRepository;
+import kr.sparta.livechat.repository.ChatRoomSummaryRepository;
 import kr.sparta.livechat.repository.MessageRepository;
 import kr.sparta.livechat.repository.ProductRepository;
 import kr.sparta.livechat.repository.UserRepository;
@@ -63,6 +67,9 @@ public class ChatRoomServiceTest {
 
 	@Mock
 	UserRepository userRepository;
+
+	@Mock
+	ChatRoomSummaryRepository chatRoomSummaryRepository;
 
 	@InjectMocks
 	ChatRoomService chatRoomService;
@@ -382,6 +389,154 @@ public class ChatRoomServiceTest {
 
 		verify(chatRoomRepository).findById(chatRoomId);
 
+	}
+
+	/**
+	 * 판매자 권한을 가진 로그인 사용자가 본인이 참여자로 있는 채팅방 상태 변경 요청을 진행하는 경우 성공 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 성공 - 로그인한 사용자 및 판매자 권한 기반 요청 처리")
+	void SuccessCasePatchChatRoom() {
+		// given
+		Long chatRoomId = 1L;
+		Long sellerId = 10L;
+
+		PatchChatRoomRequest request = mock(PatchChatRoomRequest.class);
+		given(request.getReason()).willReturn("상담 종료");
+
+		Product product = mock(Product.class);
+		ChatRoom chatRoom = ChatRoom.open(product);
+		setPrivateField(chatRoom, "id", chatRoomId);
+
+		User seller = mock(User.class);
+		given(seller.getId()).willReturn(sellerId);
+
+		ChatRoomParticipant sellerParticipant = mock(ChatRoomParticipant.class);
+		given(sellerParticipant.getUser()).willReturn(seller);
+		given(sellerParticipant.getRoleInRoom()).willReturn(RoleInRoom.SELLER);
+
+		chatRoom.getParticipants().add(sellerParticipant);
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
+		given(messageRepository.countByRoom_Id(chatRoomId)).willReturn(3L);
+		given(chatRoomSummaryRepository.existsByRoomId(chatRoomId)).willReturn(false);
+
+		// when
+		PatchChatRoomResponse response = chatRoomService.patchChatRoom(chatRoomId, sellerId, request);
+
+		// then
+		assertThat(response).isNotNull();
+		assertThat(response.getChatRoomId()).isEqualTo(chatRoomId);
+		assertThat(response.getStatus()).isEqualTo(ChatRoomStatus.CLOSED);
+		assertThat(response.getReason()).isEqualTo("상담 종료");
+		assertThat(response.getClosedAt()).isNotNull();
+		assertThat(chatRoom.getStatus()).isEqualTo(ChatRoomStatus.CLOSED);
+
+		verify(chatRoomRepository).findById(chatRoomId);
+		verify(messageRepository).countByRoom_Id(chatRoomId);
+		verify(chatRoomSummaryRepository).existsByRoomId(chatRoomId);
+		verify(chatRoomSummaryRepository).save(any());
+	}
+
+	/**
+	 * 채팅방 조회에 필요한 값을 오류로 입력하는 경우 실패 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 실패 - 입력값 오류")
+	void FailCasePatchChatRoom_InvalidInput() {
+		// given
+		Long invalidChatRoomId = 0L;
+		Long currentUserId = 10L;
+		PatchChatRoomRequest request = mock(PatchChatRoomRequest.class);
+
+		// when & then
+		Throwable thrown = catchThrowable(
+			() -> chatRoomService.patchChatRoom(invalidChatRoomId, currentUserId, request));
+
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.CHATROOM_INVALID_INPUT);
+
+		verifyNoInteractions(chatRoomRepository, messageRepository, chatRoomSummaryRepository);
+
+	}
+
+	/**
+	 * 본인이 소속한 채팅방이 아닌 채팅방의 상태를 변경 요청하는 경우 권한 없음 실패 케이스 응답을 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 실패 - 채팅방 수정 권한 없음")
+	void FailCasePatchChatRoom_AccessDenied() {
+		// given
+		Long chatRoomId = 1L;
+		Long currentUserId = 10L;
+
+		PatchChatRoomRequest request = mock(PatchChatRoomRequest.class);
+
+		Product product = mock(Product.class);
+		ChatRoom chatRoom = ChatRoom.open(product);
+		setPrivateField(chatRoom, "id", chatRoomId);
+
+		User otherSeller = mock(User.class);
+		given(otherSeller.getId()).willReturn(20L);
+
+		ChatRoomParticipant otherParticipant = mock(ChatRoomParticipant.class);
+		given(otherParticipant.getUser()).willReturn(otherSeller);
+
+		chatRoom.getParticipants().add(otherParticipant);
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
+
+		// when & then
+		Throwable thrown = catchThrowable(() -> chatRoomService.patchChatRoom(chatRoomId, currentUserId, request));
+
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.CHATROOM_ACCESS_DENIED);
+
+		verify(chatRoomRepository).findById(chatRoomId);
+		verifyNoInteractions(messageRepository, chatRoomSummaryRepository);
+
+	}
+
+	/**
+	 * 이미 채팅방을 종료 상태로 변경한 채팅방에 대해 중복된 상태 변경 요청을 하는 경우 실패 케이스를 검증합니다.
+	 */
+	@Test
+	@DisplayName("채팅방 상태 변경 실패 - 이미 종료된 채팅방에 대한 변경 요청 시")
+	void FailCasePatchChatRoom_AlreadyClosed() {
+		// given
+		Long chatRoomId = 1L;
+		Long currentUserId = 10L;
+		PatchChatRoomRequest request = mock(PatchChatRoomRequest.class);
+
+		Product product = mock(Product.class);
+		ChatRoom chatRoom = ChatRoom.open(product);
+		setPrivateField(chatRoom, "id", chatRoomId);
+		chatRoom.close("이미 종료");
+
+		given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
+
+		// when & then
+		Throwable thrown = catchThrowable(() -> chatRoomService.patchChatRoom(chatRoomId, currentUserId, request));
+
+		assertThat(thrown).isInstanceOf(CustomException.class);
+		CustomException ce = (CustomException)thrown;
+		assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.CHATROOM_ALREADY_CLOSED);
+
+		verify(chatRoomRepository).findById(chatRoomId);
+		verifyNoInteractions(messageRepository, chatRoomSummaryRepository);
+
+	}
+
+	private static void setPrivateField(Object target, String fieldName, Object value) {
+		try {
+			Field field = target.getClass().getDeclaredField(fieldName);
+			field.setAccessible(true);
+			field.set(target, value);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new IllegalStateException("Failed to set field: " + fieldName, e);
+		}
 	}
 
 }

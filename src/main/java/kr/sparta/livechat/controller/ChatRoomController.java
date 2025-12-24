@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +17,8 @@ import kr.sparta.livechat.dto.chatroom.CreateChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomRequest;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomResponse;
 import kr.sparta.livechat.security.CustomUserDetails;
 import kr.sparta.livechat.service.ChatRoomService;
 import lombok.RequiredArgsConstructor;
@@ -102,6 +105,27 @@ public class ChatRoomController {
 			chatRoomId,
 			userDetails.getUserId()
 		);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 상담중인 채팅방의 상태 변경을 진행합니다.
+	 *
+	 * @param chatRoomId  변경할 채팅방 식별자
+	 * @param request     요청 정보( OPEN -> CLOSED ), 상태 변경 사유(선택)
+	 * @param userDetails 인증된 사용자 정보
+	 * @return 변경 처리된 채팅방 응답 DTO
+	 */
+	@PatchMapping("/chat-rooms/{chatRoomId}")
+	public ResponseEntity<PatchChatRoomResponse> patchChatRoom(
+		@PathVariable Long chatRoomId,
+		@Valid @RequestBody PatchChatRoomRequest request,
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+
+		PatchChatRoomResponse response =
+			chatRoomService.patchChatRoom(chatRoomId, userDetails.getUserId(), request);
+
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }
