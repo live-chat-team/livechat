@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
 import kr.sparta.livechat.security.CustomUserDetails;
 import kr.sparta.livechat.service.ChatRoomService;
@@ -78,6 +79,28 @@ public class ChatRoomController {
 			userDetails.getUserId(),
 			page,
 			size
+		);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 특정 채팅방의 상세 정보를 조회합니다.
+	 * <p>
+	 * 요청한 사용자가 해당 채팅방의 참여자가 아닌 경우 403 에러를 반환합니다.
+	 * </p>
+	 *
+	 * @param userDetails 인증된 사용자 정보
+	 * @param chatRoomId  조회할 채팅방 식별자
+	 * @return 채팅방 상세 조회 응답 DTO
+	 */
+	@GetMapping("/chat-rooms/{chatRoomId}")
+	public ResponseEntity<GetChatRoomDetailResponse> getChatRoomDetail(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long chatRoomId
+	) {
+		GetChatRoomDetailResponse response = chatRoomService.getChatRoomDetail(
+			chatRoomId,
+			userDetails.getUserId()
 		);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
