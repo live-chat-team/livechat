@@ -82,9 +82,7 @@ public enum ErrorCode {
 	PROFILE_SIZE_EXCEEDED(
 		HttpStatus.BAD_REQUEST, "PROFILE_SIZE_EXCEEDED", "파일 크기는 5MB를 초과할 수 없습니다."),
 	PROFILE_INVALID_DATA(
-		HttpStatus.BAD_REQUEST, "PROFILE_INVALID_DATA", "프로필 수정 요청 데이터가 유효하지 않습니다."),
-	PROFILE_UPDATE_FORBIDDEN(
-		HttpStatus.FORBIDDEN, "PROFILE_UPDATE_FORBIDDEN", "본인의 프로필만 수정할 수 있습니다.");
+		HttpStatus.BAD_REQUEST, "PROFILE_INVALID_DATA", "프로필 수정 요청 데이터가 유효하지 않습니다.");
 
 	private final HttpStatus status;
 	private final String code;
