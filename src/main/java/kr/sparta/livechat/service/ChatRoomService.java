@@ -1,5 +1,6 @@
 package kr.sparta.livechat.service;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import kr.sparta.livechat.domain.entity.ChatRoom;
 import kr.sparta.livechat.domain.entity.ChatRoomParticipant;
+import kr.sparta.livechat.domain.entity.ChatRoomSummary;
 import kr.sparta.livechat.domain.entity.Message;
 import kr.sparta.livechat.domain.entity.Product;
 import kr.sparta.livechat.domain.role.ChatRoomStatus;
@@ -19,12 +21,18 @@ import kr.sparta.livechat.domain.role.ProductStatus;
 import kr.sparta.livechat.domain.role.RoleInRoom;
 import kr.sparta.livechat.dto.chatroom.ChatRoomListItem;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
 import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
+import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomRequest;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.ProductInfo;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ChatRoomRepository;
+import kr.sparta.livechat.repository.ChatRoomSummaryRepository;
 import kr.sparta.livechat.repository.MessageRepository;
 import kr.sparta.livechat.repository.ProductRepository;
 import kr.sparta.livechat.repository.UserRepository;
@@ -48,6 +56,7 @@ public class ChatRoomService {
 	private final MessageRepository messageRepository;
 	private final ProductRepository productRepository;
 	private final UserRepository userRepository;
+	private final ChatRoomSummaryRepository chatRoomSummaryRepository;
 
 	/**
 	 * 상품에 대한 상담 채팅방을 생성합니다.
@@ -159,7 +168,11 @@ public class ChatRoomService {
 		Pageable pageable = PageRequest.of(
 			page,
 			size,
-			Sort.by(Sort.Direction.DESC, "lastMessageSentAt", "openedAt"));
+			Sort.by(
+				Sort.Order.desc("lastMessageSentAt").nullsLast(),
+				Sort.Order.desc("openedAt")
+			)
+		);
 
 		Page<ChatRoom> roomPage = chatRoomRepository.findByParticipantsUserId(currentUserId, pageable);
 
@@ -175,5 +188,132 @@ public class ChatRoomService {
 			roomPage.hasNext(),
 			items
 		);
+	}
+
+	/**
+	 * 채팅방 목록 조회를 기반으로 본인이 참여자로 있는 채팅방의 상세정보를 조회합니다.
+	 * <p>
+	 * 채팅방 상세 조회 응답은 채팅방의 기본 정보와 문의한 상품의 기본정보, 참여자 정보를 반환합니다.
+	 * </p>
+	 *
+	 * @param chatRoomId    채팅방 고유식별자
+	 * @param currentUserId 로그인한 사용자 식별자
+	 * @return 채팅방 상세 조회 응답 결과
+	 */
+	@Transactional(readOnly = true)
+	public GetChatRoomDetailResponse getChatRoomDetail(Long chatRoomId, Long currentUserId) {
+
+		if (chatRoomId == null || chatRoomId <= 0) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
+		}
+
+		ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+			.orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
+
+		boolean isParticipant = chatRoom.getParticipants().stream()
+			.anyMatch(p -> p.getUser().getId().equals(currentUserId));
+
+		if (!isParticipant) {
+			throw new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED);
+		}
+
+		Product product = chatRoom.getProduct();
+		ProductInfo productInfo = new ProductInfo(product.getId(), product.getName());
+
+		List<ParticipantsListItem> participantsList = chatRoom.getParticipants().stream()
+			.map(p -> new ParticipantsListItem(
+				p.getUser().getId(),
+				p.getUser().getName(),
+				p.getRoleInRoom()
+			))
+			.toList();
+
+		return new GetChatRoomDetailResponse(
+			chatRoom.getId(),
+			chatRoom.getStatus(),
+			chatRoom.getOpenedAt(),
+			chatRoom.getClosedAt(),
+			productInfo,
+			participantsList
+		);
+	}
+
+	/**
+	 * 채팅방의 상태를 변경합니다.
+	 * <p>
+	 * 판매자는 채팅방 상태를 CLOSED로 변경할 수 있으며,
+	 * 상태 변경 시 {@code closedAt}을 현재 시각으로 갱신합니다.
+	 * 이미 종료된 채팅방에 대해 중복 종료 요청이 들어오면 409 에러를 반환합니다.
+	 * </p>
+	 *
+	 * @param chatRoomId    채팅방 고유식별자
+	 * @param currentUserId 로그인한 사용자 식별자
+	 * @param request       상태 변경 요청 DTO
+	 */
+	@Transactional
+	public PatchChatRoomResponse patchChatRoom(
+		Long chatRoomId,
+		Long currentUserId,
+		PatchChatRoomRequest request
+	) {
+		validatePatchChatRoomInput(chatRoomId, request);
+
+		ChatRoom chatRoom = findChatRoomOrThrow(chatRoomId);
+		validateNotAlreadyClosed(chatRoom);
+		validateSellerPermission(chatRoom, currentUserId);
+
+		chatRoom.close(request.getReason());
+
+		long totalMessageCount = messageRepository.countByRoom_Id(chatRoomId);
+		long durationSeconds = Duration.between(chatRoom.getOpenedAt(), chatRoom.getClosedAt()).getSeconds();
+
+		if (!chatRoomSummaryRepository.existsByRoomId(chatRoomId)) {
+			ChatRoomSummary summary = ChatRoomSummary.of(
+				chatRoomId,
+				totalMessageCount,
+				durationSeconds,
+				chatRoom.getClosedAt()
+			);
+			chatRoomSummaryRepository.save(summary);
+		}
+
+		return new PatchChatRoomResponse(
+			chatRoom.getId(),
+			chatRoom.getStatus(),
+			request.getReason(),
+			chatRoom.getClosedAt()
+		);
+	}
+
+	private void validatePatchChatRoomInput(Long chatRoomId, PatchChatRoomRequest request) {
+		if (chatRoomId == null || chatRoomId <= 0) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
+		}
+		if (request == null) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
+		}
+	}
+
+	private ChatRoom findChatRoomOrThrow(Long chatRoomId) {
+		return chatRoomRepository.findById(chatRoomId)
+			.orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
+	}
+
+	private void validateNotAlreadyClosed(ChatRoom chatRoom) {
+		if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+			throw new CustomException(ErrorCode.CHATROOM_ALREADY_CLOSED);
+		}
+	}
+
+	private void validateSellerPermission(ChatRoom chatRoom, Long currentUserId) {
+		boolean isSeller = chatRoom.getParticipants().stream()
+			.anyMatch(p ->
+				p.getUser().getId().equals(currentUserId)
+					&& p.getRoleInRoom() == RoleInRoom.SELLER
+			);
+
+		if (!isSeller) {
+			throw new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED);
+		}
 	}
 }
