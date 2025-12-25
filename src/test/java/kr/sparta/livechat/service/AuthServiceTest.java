@@ -16,9 +16,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import kr.sparta.livechat.dto.UserLoginRequest;
-import kr.sparta.livechat.dto.UserRegisterRequest;
-import kr.sparta.livechat.dto.UserRegisterResponse;
+import kr.sparta.livechat.dto.user.UserLoginRequest;
+import kr.sparta.livechat.dto.user.UserRegisterRequest;
+import kr.sparta.livechat.dto.user.UserRegisterResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -161,7 +161,7 @@ public class AuthServiceTest {
 
 		// when & then
 		CustomException exception = assertThrows(CustomException.class, () -> authService.login(request));
-		assertEquals(ErrorCode.AUTH_INVALID_CREDENTIALS, exception.getErrorCode());
+		assertEquals(ErrorCode.AUTH_USER_NOT_FOUND, exception.getErrorCode());
 		verify(passwordEncoder, never()).matches(anyString(), anyString());
 		verify(jwtService, never()).createAccessToken(anyLong(), any(Role.class));
 	}

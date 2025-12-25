@@ -35,6 +35,16 @@ public class GlobalStompErrorHandler extends StompSubProtocolErrorHandler {
 
 	private final ObjectMapper objectMapper;
 
+
+	/**
+	 * 발생한 예외 {@code ex}를 {@link WsErrorCode}로 변환해서
+	 * {@link WsErrorResponse} 및 {@link WsErrorResponse.WsErrorBody}를 생성합니다.
+	 * 생성한 응답은 Json 형태로 클라이언트에게 전달됩니다.
+	 *
+	 * @param clientMessage 예외가 발생한 STOMP 메시지
+	 * @param ex STOMP 메시지 처리 중 발생한 예외
+	 * @return JSON STOMP ERROR 프레임 메시지
+	 */
 	@Override
 	public Message<byte[]> handleClientMessageProcessingError(Message<byte[]> clientMessage, Throwable ex) {
 

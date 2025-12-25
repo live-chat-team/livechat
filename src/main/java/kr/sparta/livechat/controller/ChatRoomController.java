@@ -3,17 +3,24 @@ package kr.sparta.livechat.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import kr.sparta.livechat.domain.role.ChatRoomStatus;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.CreateChatRoomResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomDetailResponse;
+import kr.sparta.livechat.dto.chatroom.GetChatRoomListResponse;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomRequest;
+import kr.sparta.livechat.dto.chatroom.PatchChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.PatchChatRoomStatusRequest;
 import kr.sparta.livechat.security.CustomUserDetails;
 import kr.sparta.livechat.service.ChatRoomService;
@@ -61,23 +68,67 @@ public class ChatRoomController {
 	}
 
 	/**
-	 * 채팅방 상태를 변경합니다.
+	 * 로그인한 사용자가 참여한 채팅방 목록을 조회합니다.
+	 *
+	 * @param userDetails 인증된 사용자 정보
+	 * @param page        채팅방 목록 조회 페이지 (기본 0페이지)
+	 * @param size        채팅방 목록 조회 개수 (기본 20개 단위)
+	 * @return 인증된 사용자가 참여한 채팅방 목록 정보
+	 */
+	@GetMapping("/chat-rooms")
+	public ResponseEntity<GetChatRoomListResponse> getChatRoomList(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size
+	) {
+		GetChatRoomListResponse response = chatRoomService.getChatRoomList(
+			userDetails.getUserId(),
+			page,
+			size
+		);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 특정 채팅방의 상세 정보를 조회합니다.
 	 * <p>
-	 * status가 CLOSED로 변경되면 채팅방을 종료 처리하고
-	 * ROOM_CLOSED 시스템 이벤트를 브로드캐스트합니다.
+	 * 요청한 사용자가 해당 채팅방의 참여자가 아닌 경우 403 에러를 반환합니다.
 	 * </p>
 	 *
-	 * @param roomId      채팅방 ID
-	 * @param request     상태 변경 요청 DTO
 	 * @param userDetails 인증된 사용자 정보
+	 * @param chatRoomId  조회할 채팅방 식별자
+	 * @return 채팅방 상세 조회 응답 DTO
 	 */
-	@PatchMapping("/chat/rooms/{roomId}/status")
-	public ResponseEntity<Void> updateChatRoomStatus(
-		@PathVariable Long roomId,
-		@Valid @RequestBody PatchChatRoomStatusRequest request,
+	@GetMapping("/chat-rooms/{chatRoomId}")
+	public ResponseEntity<GetChatRoomDetailResponse> getChatRoomDetail(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long chatRoomId
+	) {
+		GetChatRoomDetailResponse response = chatRoomService.getChatRoomDetail(
+			chatRoomId,
+			userDetails.getUserId()
+		);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+
+	/**
+	 * 상담중인 채팅방의 상태 변경을 진행합니다.
+	 *
+	 * @param chatRoomId  변경할 채팅방 식별자
+	 * @param request     요청 정보( OPEN -> CLOSED ), 상태 변경 사유(선택)
+	 * @param userDetails 인증된 사용자 정보
+	 * @return 변경 처리된 채팅방 응답 DTO
+	 */
+	@PatchMapping("/chat-rooms/{chatRoomId}")
+	public ResponseEntity<PatchChatRoomResponse> patchChatRoom(
+		@PathVariable Long chatRoomId,
+		@Valid @RequestBody PatchChatRoomRequest request,
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
-		chatRoomService.updateChatRoomStatus(roomId, request.getStatus(), userDetails.getUserId());
-		return ResponseEntity.noContent().build();
+
+		PatchChatRoomResponse response =
+			chatRoomService.patchChatRoom(chatRoomId, userDetails.getUserId(), request);
+
+		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }

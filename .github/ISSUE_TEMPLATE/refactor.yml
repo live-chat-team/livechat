@@ -1,0 +1,22 @@
+name: "🛠 Refactor"
+description: "기존 코드 구조 개선"
+labels: ["refactor"]
+body:
+  - type: textarea
+    attributes:
+      label: 📄 설명
+      description: 리팩터링이 필요한 이유와 개선 방향을 작성해 주세요.
+      placeholder: 자세히 적을 수록 좋습니다!
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ 작업할 내용
+      description: 리팩터링 작업 항목을 체크박스 형태로 작성해주세요.
+      placeholder: 함수 분리, 네이밍 개선 등 구체적으로 적어주세요!
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🙋🏻 참고 자료
+      description: 참고 자료가 있다면 작성해 주세요.
