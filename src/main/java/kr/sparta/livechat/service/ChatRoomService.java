@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ import kr.sparta.livechat.dto.chatroom.ParticipantsListItem;
 import kr.sparta.livechat.dto.chatroom.PatchChatRoomRequest;
 import kr.sparta.livechat.dto.chatroom.PatchChatRoomResponse;
 import kr.sparta.livechat.dto.chatroom.ProductInfo;
+import kr.sparta.livechat.dto.socket.RoomClosedEventResponse;
 import kr.sparta.livechat.entity.Role;
 import kr.sparta.livechat.entity.User;
 import kr.sparta.livechat.global.exception.CustomException;
@@ -56,6 +58,9 @@ public class ChatRoomService {
 	private final MessageRepository messageRepository;
 	private final ProductRepository productRepository;
 	private final UserRepository userRepository;
+	private final ChatRoomSummaryRepository chatRoomSummaryRepository;
+	private final SocketService socketService;
+	private final SimpMessagingTemplate messagingTemplate;
 
 	/**
 	 * 상품에 대한 상담 채팅방을 생성합니다.
@@ -278,6 +283,17 @@ public class ChatRoomService {
 			);
 			chatRoomSummaryRepository.save(summary);
 		}
+
+		RoomClosedEventResponse event = RoomClosedEventResponse.builder()
+			.event("ROOM_CLOSED")
+			.roomId(chatRoomId)
+			.closedBy(currentUserId)
+			.reason(request.getReason())
+			.closedAt(chatRoom.getClosedAt())
+			.build();
+
+		String destination = "/sub/chat/room/" + chatRoomId + "/system";
+		messagingTemplate.convertAndSend(destination, event);
 
 		return new PatchChatRoomResponse(
 			chatRoom.getId(),
