@@ -22,6 +22,8 @@ public enum WsErrorCode {
 
 	AUTH_FAILED(4001, "WS_AUTH_FAILED", "인증 실패"),
 	FORBIDDEN(4002, "WS_FORBIDDEN", "권한 없음"),
+	INVALID_MESSAGE(4003, "WS_INVALID_MESSAGE", "type/content 형식 오류"),
+	CHAT_ROOM_NOT_FOUND( 4004,"WS_CHAT_ROOM_NOT_FOUND","해당 채팅방이 존재하지 않습니다."),
 	INTERNAL_ERROR(4005, "WS_INTERNAL_ERROR", "서버에 문제가 있습니다.");
 
 	private final int status;

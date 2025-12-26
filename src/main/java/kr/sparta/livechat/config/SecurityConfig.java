@@ -57,7 +57,7 @@ public class SecurityConfig {
 					HttpMethod.GET, "/api/products", "/api/products/*", "/api/products/**").permitAll()
 				.requestMatchers("/api/auth/password-reset/**").permitAll()
 				.requestMatchers("/api/auth/logout").authenticated()
-				.requestMatchers("/api/admin/**").authenticated()
+  				.requestMatchers("/api/admin/**").authenticated()
 				.requestMatchers("/ws/**").permitAll()
 				.anyRequest().authenticated()
 			)

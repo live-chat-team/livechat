@@ -14,11 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import kr.sparta.livechat.domain.entity.ChatRoom;
 import kr.sparta.livechat.domain.entity.Message;
+import kr.sparta.livechat.domain.role.ChatRoomStatus;
 import kr.sparta.livechat.domain.role.RoleInRoom;
 import kr.sparta.livechat.dto.admin.AdminChatDetailResponse;
 import kr.sparta.livechat.dto.admin.AdminChatMessageResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomListResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomResponse;
+import kr.sparta.livechat.dto.admin.AdminChatStatusRequest;
+import kr.sparta.livechat.dto.admin.AdminChatStatusResponse;
 import kr.sparta.livechat.global.exception.CustomException;
 import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.ChatRoomRepository;
@@ -69,7 +72,7 @@ public class AdminChatService {
 		}
 
 		Pageable pageable = PageRequest.of(page, size,
-			Sort.by(Sort.Order.asc("status"), Sort.Order.desc("createdAt")));
+			Sort.by(Sort.Order.desc("status"), Sort.Order.desc("createdAt")));
 
 		Page<ChatRoom> chatRooms = chatRoomRepository.findAll(pageable);
 		List<AdminChatRoomResponse> dtoList = chatRooms.getContent().stream()
@@ -107,15 +110,6 @@ public class AdminChatService {
 			dtoList
 		);
 	}
-
-	/**
-	 * 특정 채팅방의 메시지 내역을 상세 조회합니다)
-	 * Slice를 사용하여 무한 스크롤 방식에 최적화
-	 *
-	 * @param chatRoomId 조회할 채팅방 ID
-	 * @param page 페이지 번호
-	 * @param size 페이지당 메시지 개수
-	 */
 
 	/**
 	 * 특정 채팅방의 메시지 내역을 상세 조회합니다
@@ -165,6 +159,47 @@ public class AdminChatService {
 			.size(messageSlice.getSize())
 			.hasNext(messageSlice.hasNext())
 			.messagesList(messageDtos)
+			.build();
+	}
+
+	/**
+	 * 관리자 권한으로 특정 채팅방의 상태를 CLOSED로 변경한다
+	 * 관리자 인증 여부 확인,
+	 * 대상 채팅방의 존재 여부 확인
+	 * 요청된 값이 CLOSED인지 확인
+	 * 이미 종료된 채팅방일 경우 예외 메세지
+	 * @param chatRoomId 상태를 변경할 채팅방 ID
+	 * @param request 변경하고자 하는 상태를 담은 DTO
+	 * @return 변경된 채팅방 상태와 관련된 상품 정보
+	 */
+	@Transactional
+	public AdminChatStatusResponse updateChatRoomStatus(Long chatRoomId, AdminChatStatusRequest request) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !authentication.isAuthenticated() ||
+			authentication.getPrincipal().equals("anonymousUser")) {
+			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+		}
+
+		ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+			.orElseThrow(() -> new CustomException(ErrorCode.CHATROOM_NOT_FOUND));
+
+		if (!"CLOSED".equalsIgnoreCase(request.getStatus())) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_STATUS);
+		}
+
+		if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+			throw new CustomException(ErrorCode.CHATROOM_ALREADY_CLOSED);
+		}
+
+		chatRoom.close();
+
+		return AdminChatStatusResponse.builder()
+			.chatRoomId(chatRoom.getId())
+			.status(chatRoom.getStatus().name())
+			.openedAt(chatRoom.getOpenedAt())
+			.closedAt(chatRoom.getClosedAt())
+			.productId(chatRoom.getProduct().getId())
+			.productName(chatRoom.getProduct().getName())
 			.build();
 	}
 }

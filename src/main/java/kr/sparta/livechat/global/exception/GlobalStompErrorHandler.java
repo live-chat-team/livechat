@@ -19,10 +19,10 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 /**
  * STOMP 프레임 처리 흐름에서 예외가 발생했을 표준화된 오류 응답을 반환하는 클래스입니다.
  * <p>
- *   예외{@code ex}를 분석하여 {@link WsErrorCode}로 매핑합니다.
- *   {@link WsErrorResponse} 페이로드를 생성합니다.
- *   {@code StompCommand.ERROR} 헤더를 구성하고 content-type을 Json 형식으로 설정합니다.
- *   최종적으로 ERROR 프레임 메시지를 반환합니다.
+ * 예외{@code ex}를 분석하여 {@link WsErrorCode}로 매핑합니다.
+ * {@link WsErrorResponse} 페이로드를 생성합니다.
+ * {@code StompCommand.ERROR} 헤더를 구성하고 content-type을 Json 형식으로 설정합니다.
+ * 최종적으로 ERROR 프레임 메시지를 반환합니다.
  * </p>
  *
  * @author 오정빈
@@ -80,15 +80,25 @@ public class GlobalStompErrorHandler extends StompSubProtocolErrorHandler {
 
 	private WsErrorCode mapToWsErrorCode(Throwable ex) {
 
+		if (ex instanceof WsCustomException wse) {
+			return wse.getErrorCode();
+		}
+
 		if (ex instanceof CustomException ce) {
 			ErrorCode ec = ce.getErrorCode();
 
-			if (ec.name().startsWith("AUTH_")) return WsErrorCode.AUTH_FAILED;
+			if (ec.name().startsWith("AUTH_")) {
+				return WsErrorCode.AUTH_FAILED;
+			}
 
 			if (ec == ErrorCode.CHATROOM_ACCESS_DENIED
 				|| ec == ErrorCode.PRODUCT_ACCESS_DENIED
 				|| ec == ErrorCode.AUTH_FORBIDDEN_ROLE) {
 				return WsErrorCode.FORBIDDEN;
+			}
+
+			if (ec == ErrorCode.CHATROOM_NOT_FOUND) {
+				return WsErrorCode.CHAT_ROOM_NOT_FOUND;
 			}
 
 			return WsErrorCode.INTERNAL_ERROR;

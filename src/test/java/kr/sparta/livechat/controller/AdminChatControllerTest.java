@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,9 +18,15 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import kr.sparta.livechat.config.SecurityConfig;
 import kr.sparta.livechat.dto.admin.AdminChatDetailResponse;
 import kr.sparta.livechat.dto.admin.AdminChatRoomListResponse;
+import kr.sparta.livechat.dto.admin.AdminChatStatusRequest;
+import kr.sparta.livechat.dto.admin.AdminChatStatusResponse;
+import kr.sparta.livechat.global.exception.CustomException;
+import kr.sparta.livechat.global.exception.ErrorCode;
 import kr.sparta.livechat.repository.UserRepository;
 import kr.sparta.livechat.service.AdminChatService;
 import kr.sparta.livechat.service.AuthService;
@@ -39,6 +46,9 @@ class AdminChatControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@MockitoBean
 	private AdminChatService adminChatService;
@@ -90,9 +100,13 @@ class AdminChatControllerTest {
 	@DisplayName("GET /api/admin/chat-rooms - 실패 (일반 유저 권한)")
 	@WithMockUser(roles = "USER")
 	void getAdminChatRooms_Forbidden() throws Exception {
+		given(adminChatService.getAllChatRooms(anyInt(), anyInt()))
+			.willThrow(new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED));
+
 		mockMvc.perform(get("/api/admin/chat-rooms")
 				.with(csrf()))
-			.andExpect(status().isForbidden());
+			.andExpect(status().isForbidden()) // 이제 403이 발생합니다.
+			.andExpect(jsonPath("$.code").value("CHATROOM_ACCESS_DENIED"));
 	}
 
 	/**
@@ -153,9 +167,13 @@ class AdminChatControllerTest {
 	@DisplayName("GET /api/admin/chat-rooms/{chatRoomId} - 실패 (일반 유저 권한)")
 	@WithMockUser(roles = "USER")
 	void getAdminChatDetail_Forbidden() throws Exception {
+		given(adminChatService.getChatRoomDetail(anyLong(), anyInt(), anyInt()))
+			.willThrow(new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED));
+
 		mockMvc.perform(get("/api/admin/chat-rooms/1")
 				.with(csrf()))
-			.andExpect(status().isForbidden());
+			.andExpect(status().isForbidden()) // 이제 403이 발생합니다.
+			.andExpect(jsonPath("$.code").value("CHATROOM_ACCESS_DENIED"));
 	}
 
 	/**
@@ -170,5 +188,61 @@ class AdminChatControllerTest {
 		mockMvc.perform(get("/api/admin/chat-rooms/1")
 				.with(csrf()))
 			.andExpect(status().isForbidden());
+	}
+
+	/**
+	 * 관리자가 채팅방 상태를 변경할때 성공 케이스
+	 * HTTP 200 응답 반환
+	 * @throws Exception 요청수행중 발생 하는 예외
+	 */
+	@Test
+	@DisplayName("PATCH /api/admin/chat-rooms/{chatRoomId} - 성공 (상태 변경)")
+	@WithMockUser(roles = "ADMIN")
+	void updateChatRoomStatus_Success() throws Exception {
+		// given
+		Long chatRoomId = 1L;
+		AdminChatStatusRequest request = new AdminChatStatusRequest("CLOSED");
+		AdminChatStatusResponse response = AdminChatStatusResponse.builder()
+			.chatRoomId(chatRoomId)
+			.status("CLOSED")
+			.openedAt(LocalDateTime.now().minusHours(1))
+			.closedAt(LocalDateTime.now())
+			.productId(100L)
+			.productName("테스트 상품")
+			.build();
+
+		given(adminChatService.updateChatRoomStatus(eq(chatRoomId), any(AdminChatStatusRequest.class)))
+			.willReturn(response);
+
+		// when & then
+		mockMvc.perform(patch("/api/admin/chat-rooms/{chatRoomId}", chatRoomId)
+				.with(csrf())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("CLOSED"))
+			.andExpect(jsonPath("$.chatRoomId").value(chatRoomId));
+	}
+
+	/**
+	 * 일반 사용자가 관리자 전용 상태 변경 API를 실행했을때 실패 테스트
+	 * HTTP 403 반환 여부와 에러코드 반환 여부
+	 * @throws Exception 요청 수행 중 발생할 수 있는 예외
+	 */
+	@Test
+	@DisplayName("PATCH /api/admin/chat-rooms/{chatRoomId} - 실패 (일반 유저 권한)")
+	@WithMockUser(roles = "USER")
+	void updateChatRoomStatus_Forbidden() throws Exception {
+		// given:
+		given(adminChatService.updateChatRoomStatus(anyLong(), any()))
+			.willThrow(new CustomException(ErrorCode.CHATROOM_ACCESS_DENIED));
+
+		// when & then
+		mockMvc.perform(patch("/api/admin/chat-rooms/1")
+				.with(csrf())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(new AdminChatStatusRequest("CLOSED"))))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.code").value("CHATROOM_ACCESS_DENIED"));
 	}
 }
