@@ -40,6 +40,9 @@ public class User extends BaseTimeEntity {
 	@Column(nullable = false, length = 500)
 	private String password;
 
+	@Column(length = 500)
+	private String profileImage;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private Role role;
@@ -69,4 +72,14 @@ public class User extends BaseTimeEntity {
 	public void updatePassword(String encodedPassword) {
 		this.password = encodedPassword;
 	}
+
+	/**
+	 * 프로필 이미지를 업데이트합니다.
+	 *
+	 * @param profileImageUrl S3에 업로드된 이미지 URL
+	 */
+	public void updateProfileImage(String profileImageUrl) {
+		this.profileImage = profileImageUrl;
+	}
+
 }

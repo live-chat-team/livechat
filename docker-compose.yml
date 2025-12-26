@@ -1,6 +1,6 @@
 services:
   spring-app:
-    build: .
+    image: ${DOCKER_USERNAME}/livechat:${IMAGE_TAG}
     container_name: spring
     restart: always
     environment:

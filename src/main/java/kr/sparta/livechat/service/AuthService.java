@@ -75,6 +75,9 @@ public class AuthService {
 			.role(request.getRole())
 			.build();
 
+		user.updateProfileImage(
+			"https://livechat-s3-bucket-storage.s3.ap-northeast-2.amazonaws.com/default_profile_image.jpg");
+
 		userRepository.save(user);
 		return UserRegisterResponse.from(user);
 	}

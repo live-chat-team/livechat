@@ -52,3 +52,12 @@ jwt:
   secret: ${JWT_SECRET_KEY}
   accessTokenExpirationMs: 3600000
   refreshTokenExpirationMs: 604800000
+
+cloud:
+  aws:
+    s3:
+      bucket: livechat-s3-bucket-storage
+    region:
+      static: ap-northeast-2
+    credentials:
+      instance-profile: true
