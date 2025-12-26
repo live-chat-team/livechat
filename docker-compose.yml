@@ -12,6 +12,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       SERVER_PORT: ${SERVER_PORT}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      GMAIL_ID: ${GMAIL_ID}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
     ports:
       - "8080:8080"
     networks:
