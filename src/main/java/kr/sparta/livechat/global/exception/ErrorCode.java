@@ -35,6 +35,10 @@ public enum ErrorCode {
 		HttpStatus.BAD_REQUEST, "AUTH_TOKEN_UNSUPPORTED", "지원되지 않는 JWT 토큰입니다."),
 	AUTH_DUPLICATE_EMAIL(
 		HttpStatus.CONFLICT, "AUTH_DUPLICATE_EMAIL", "이미 사용 중인 이메일 주소입니다."),
+	AUTH_INVALID_EMAIL_FORMAT(
+		HttpStatus.BAD_REQUEST, "AUTH_INVALID_EMAIL_FORMAT", "이메일 형식이 올바르지 않습니다."),
+	AUTH_INVALID_PASSWORD_FORMAT(
+		HttpStatus.BAD_REQUEST, "AUTH_INVALID_PASSWORD_FORMAT", "비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다."),
 	AUTH_FORBIDDEN_ROLE(
 		HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN_ROLE", "ADMIN 역할은 일반 회원가입을 통해 등록할 수 없습니다."),
 	AUTH_USER_NOT_FOUND(
@@ -43,6 +47,10 @@ public enum ErrorCode {
 		HttpStatus.UNAUTHORIZED, "AUTH_MISMATCH", "이메일 또는 비밀번호가 일치하지 않습니다."),
 	AUTH_TOKEN_BLACKLISTED(
 		HttpStatus.FORBIDDEN, "AUTH_TOKEN_BLACKLISTED", "이미 로그아웃 처리된 토큰입니다."),
+	AUTH_EMAIL_REQUIRED(
+		HttpStatus.BAD_REQUEST, "AUTH_EMAIL_REQUIRED", "이메일은 필수 입력 항목입니다."),
+	AUTH_PASSWORD_REQUIRED(
+		HttpStatus.BAD_REQUEST, "AUTH_PASSWORD_REQUIRED", "비밀번호는 필수 입력 항목입니다."),
 
 	// 상품 관리에서 사용할 에러코드
 	PRODUCT_INVALID_INPUT(

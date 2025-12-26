@@ -168,7 +168,11 @@ public class ChatRoomService {
 		Pageable pageable = PageRequest.of(
 			page,
 			size,
-			Sort.by(Sort.Direction.DESC, "lastMessageSentAt", "openedAt"));
+			Sort.by(
+				Sort.Order.desc("lastMessageSentAt").nullsLast(),
+				Sort.Order.desc("openedAt")
+			)
+		);
 
 		Page<ChatRoom> roomPage = chatRoomRepository.findByParticipantsUserId(currentUserId, pageable);
 
@@ -283,6 +287,9 @@ public class ChatRoomService {
 
 	private void validatePatchChatRoomInput(Long chatRoomId, PatchChatRoomRequest request) {
 		if (chatRoomId == null || chatRoomId <= 0) {
+			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
+		}
+		if (request == null) {
 			throw new CustomException(ErrorCode.CHATROOM_INVALID_INPUT);
 		}
 	}
