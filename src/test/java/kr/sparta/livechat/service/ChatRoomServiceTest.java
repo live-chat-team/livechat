@@ -71,8 +71,21 @@ public class ChatRoomServiceTest {
 	@Mock
 	ChatRoomSummaryRepository chatRoomSummaryRepository;
 
+	@Mock
+	SocketService socketService;
+
 	@InjectMocks
 	ChatRoomService chatRoomService;
+
+	private static void setPrivateField(Object target, String fieldName, Object value) {
+		try {
+			Field field = target.getClass().getDeclaredField(fieldName);
+			field.setAccessible(true);
+			field.set(target, value);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new IllegalStateException("Failed to set field: " + fieldName, e);
+		}
+	}
 
 	/**
 	 * 채팅방 생성 케이스를 검증합니다. 채팅방 생성에 필요한 최소 조건을 만족했는지 검증합니다.
@@ -527,16 +540,6 @@ public class ChatRoomServiceTest {
 		verify(chatRoomRepository).findById(chatRoomId);
 		verifyNoInteractions(messageRepository, chatRoomSummaryRepository);
 
-	}
-
-	private static void setPrivateField(Object target, String fieldName, Object value) {
-		try {
-			Field field = target.getClass().getDeclaredField(fieldName);
-			field.setAccessible(true);
-			field.set(target, value);
-		} catch (NoSuchFieldException | IllegalAccessException e) {
-			throw new IllegalStateException("Failed to set field: " + fieldName, e);
-		}
 	}
 
 }
