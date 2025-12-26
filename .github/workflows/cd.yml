@@ -46,6 +46,9 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DATABASE_NAME=${{ secrets.DATABASE_NAME }}
             REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
             EOF
             
             docker-compose down
