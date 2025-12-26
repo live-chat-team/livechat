@@ -47,7 +47,6 @@ jobs:
             DATABASE_NAME=${{ secrets.DATABASE_NAME }}
             REDIS_HOST=${{ secrets.REDIS_HOST }}
             REDIS_PORT=${{ secrets.REDIS_PORT }}
-            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
             GMAIL_ID=${{ secrets.GMAIL_ID }}
             SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
