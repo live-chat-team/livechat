@@ -63,6 +63,10 @@ public class ChatMessageService {
 		ChatRoom room = chatRoomRepository.findById(roomId)
 			.orElseThrow(() -> new WsCustomException(WsErrorCode.CHAT_ROOM_NOT_FOUND));
 
+		if (room.getStatus() == ChatRoomStatus.CLOSED) {
+			throw new WsCustomException(WsErrorCode.FORBIDDEN);
+		}
+
 		if (!socketService.isParticipant(roomId, writerId)) {
 			throw new WsCustomException(WsErrorCode.FORBIDDEN);
 		}
