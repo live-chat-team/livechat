@@ -52,11 +52,12 @@ public class SecurityConfig {
 				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			)
 			.authorizeHttpRequests(auth -> auth
+				.requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
 				.requestMatchers(
 					HttpMethod.GET, "/api/products", "/api/products/*", "/api/products/**").permitAll()
-				.requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+				.requestMatchers("/api/auth/password-reset/**").permitAll()
 				.requestMatchers("/api/auth/logout").authenticated()
-				.requestMatchers("/api/admin/**").authenticated()
+  				.requestMatchers("/api/admin/**").authenticated()
 				.requestMatchers("/ws/**").permitAll()
 				.anyRequest().authenticated()
 			)

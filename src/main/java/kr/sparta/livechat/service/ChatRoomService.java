@@ -56,6 +56,7 @@ public class ChatRoomService {
 	private final MessageRepository messageRepository;
 	private final ProductRepository productRepository;
 	private final UserRepository userRepository;
+	private final SocketService socketService;
 	private final ChatRoomSummaryRepository chatRoomSummaryRepository;
 
 	/**
@@ -99,6 +100,9 @@ public class ChatRoomService {
 		Message savedMessage = messageRepository.save(firstMessage);
 
 		savedRoom.touchLastMessageSentAt(savedMessage.getSentAt());
+
+		socketService.addParticipant(savedRoom.getId(), currentUser.getId());
+		socketService.addParticipant(savedRoom.getId(), seller.getId());
 
 		CreateChatRoomResponse.FirstMessageResponse firstMessageResponse =
 			CreateChatRoomResponse.FirstMessageResponse.of(savedMessage);

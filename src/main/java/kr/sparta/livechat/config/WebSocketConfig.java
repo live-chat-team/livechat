@@ -28,19 +28,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 		registry.addEndpoint("/ws/chat")
-			.setAllowedOriginPatterns("*");
+			.setAllowedOriginPatterns("*")
+			.withSockJS();
 		registry.setErrorHandler(globalStompErrorHandler);
 	}
 
-	@Override
-	public void configureMessageBroker(MessageBrokerRegistry registry) {
-		registry.setApplicationDestinationPrefixes("/pub");
-		registry.enableSimpleBroker("/sub");
-	}
+		@Override
+		public void configureMessageBroker(MessageBrokerRegistry registry) {
+			registry.setApplicationDestinationPrefixes("/pub");
+			registry.enableSimpleBroker("/sub");
+		}
 
-	@Override
-	public void configureClientInboundChannel(ChannelRegistration registration) {
-		registration.interceptors(stompCannelInterceptor);
-	}
+		@Override
+		public void configureClientInboundChannel(ChannelRegistration registration) {
+			registration.interceptors(stompCannelInterceptor);
+		}
 
-}
+	}
