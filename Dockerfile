@@ -11,7 +11,7 @@ COPY src ./src
 
 RUN ./gradlew clean build -x test
 
-FROM eclipse-temurin:17-jre-alpine
+FROM --platform=linux/amd64 eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 

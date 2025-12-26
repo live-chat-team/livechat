@@ -382,6 +382,9 @@ public class ProductControllerTest {
 		loginAsSeller(1L);
 		Long productId = 1L;
 
+		given(productService.patchProduct(eq(productId), any(), eq(1L)))
+			.willThrow(new CustomException(ErrorCode.PRODUCT_INVALID_INPUT));
+
 		// when & then
 		mockMvc.perform(patch("/api/products/{productId}", productId)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -393,7 +396,7 @@ public class ProductControllerTest {
 			.andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_INVALID_INPUT.getMessage()))
 			.andExpect(jsonPath("$.timestamp").exists());
 
-		verifyNoInteractions(productService);
+		then(productService).should(times(1)).patchProduct(eq(productId), any(), eq(1L));
 	}
 
 	/**

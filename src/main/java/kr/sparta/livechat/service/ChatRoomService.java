@@ -57,6 +57,7 @@ public class ChatRoomService {
 	private final ProductRepository productRepository;
 	private final UserRepository userRepository;
 	private final SocketService socketService;
+	private final ChatRoomSummaryRepository chatRoomSummaryRepository;
 
 	/**
 	 * 상품에 대한 상담 채팅방을 생성합니다.

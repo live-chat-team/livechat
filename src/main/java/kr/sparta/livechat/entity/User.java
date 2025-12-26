@@ -64,6 +64,16 @@ public class User extends BaseTimeEntity {
 	}
 
 	/**
+	 * 사용자의 비밀번호를 변경합니다.
+	 * 입력값은 이미 암호화(encoding)된 비밀번호여야 합니다.
+	 *
+	 * @param encodedPassword 암호화된 비밀번호
+	 */
+	public void updatePassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
+
+	/**
 	 * 프로필 이미지를 업데이트합니다.
 	 *
 	 * @param profileImageUrl S3에 업로드된 이미지 URL
