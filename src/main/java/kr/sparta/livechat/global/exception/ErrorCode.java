@@ -25,6 +25,8 @@ public enum ErrorCode {
 		HttpStatus.BAD_REQUEST, "COMMON_BAD_PAGINATION", "page 또는 size값이 유효하지 않습니다."),
 	COMMON_INTERNAL_ERROR(
 		HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버에 문제가 있습니다."),
+	TOO_MANY_REQUEST(
+		HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUEST", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
 
 	// 인증/인가에서 사용하는 에러코드
 	AUTH_INVALID_TOKEN_FORMAT(
@@ -51,6 +53,10 @@ public enum ErrorCode {
 		HttpStatus.BAD_REQUEST, "AUTH_EMAIL_REQUIRED", "이메일은 필수 입력 항목입니다."),
 	AUTH_PASSWORD_REQUIRED(
 		HttpStatus.BAD_REQUEST, "AUTH_PASSWORD_REQUIRED", "비밀번호는 필수 입력 항목입니다."),
+	AUTH_RESET_CODE_EXPIRED(
+		HttpStatus.UNAUTHORIZED, "AUTH_RESET_CODE_EXPIRED", "인증 코드가 만료되었습니다. 다시 요청해주세요."),
+	AUTH_RESET_CODE_INVALID(
+		HttpStatus.BAD_REQUEST, "AUTH_RESET_CODE_INVALID", "코드값이 올바르지 않습니다. 다시 입력해주세요."),
 
 	// 상품 관리에서 사용할 에러코드
 	PRODUCT_INVALID_INPUT(

@@ -4,16 +4,17 @@ services:
     container_name: spring
     restart: always
     environment:
+      SERVER_PORT: ${SERVER_PORT}
       SPRING_DATASOURCE_URL: ${DB_URL}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
       SPRING_DATA_REDIS_PORT: 6379
+      GMAIL_ID: ${GMAIL_ID}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     ports:
       - "8080:8080"
-    depends_on:
-      - mysql
-      - redis
     networks:
       - livechat-network
 
@@ -38,7 +39,7 @@ services:
     volumes:
       - my-db-volume:/var/lib/mysql
     networks:
-      - app-network
+      - livechat-network
 
 volumes:
   my-db-volume:

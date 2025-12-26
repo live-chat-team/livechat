@@ -35,6 +35,7 @@ public class GlobalStompErrorHandler extends StompSubProtocolErrorHandler {
 
 	private final ObjectMapper objectMapper;
 
+
 	/**
 	 * 발생한 예외 {@code ex}를 {@link WsErrorCode}로 변환해서
 	 * {@link WsErrorResponse} 및 {@link WsErrorResponse.WsErrorBody}를 생성합니다.
