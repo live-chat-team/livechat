@@ -72,10 +72,14 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
 
 			String destination = accessor.getDestination();
-			if (destination == null) return message;
+			if (destination == null) {
+				return message;
+			}
 
 			Matcher matcher = ROOM_SUBSCRIBE_PATTERN.matcher(destination);
-			if (!matcher.matches()) return message;
+			if (!matcher.matches()) {
+				return message;
+			}
 
 			Long roomId = Long.parseLong(matcher.group("roomId"));
 
