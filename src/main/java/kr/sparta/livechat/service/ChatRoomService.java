@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,6 +60,7 @@ public class ChatRoomService {
 	private final ChatRoomSummaryRepository chatRoomSummaryRepository;
 	private final SocketService socketService;
 	private final SimpMessagingTemplate messagingTemplate;
+	private final SocketService socketService;
 
 	/**
 	 * 상품에 대한 상담 채팅방을 생성합니다.
